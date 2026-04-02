@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account — Outreach Agent</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { font-family: 'Inter', system-ui, sans-serif; }
+        body { background: #f3f4f8; }
+        .shake { animation: shake 0.4s ease; }
+        @keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-6px)} 40%,80%{transform:translateX(6px)} }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center py-12">
+    <div class="w-full max-w-md px-4">
+        <!-- Logo -->
+        <div class="text-center mb-8">
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-200">
+                <svg width="24" height="24" fill="white" viewBox="0 0 16 16"><path d="M8 0L14.928 4v8L8 16 1.072 12V4z"/></svg>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-800">Create your account</h1>
+            <p class="text-gray-500 text-sm mt-1">Set up your Outreach Agent in minutes</p>
+        </div>
+
+        <!-- Form -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8" id="reg-card">
+            <div id="error-box" class="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg px-4 py-3 mb-5 hidden"></div>
+
+            <form id="register-form" class="space-y-4" onsubmit="return handleRegister(event)">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
+                    <input type="text" name="full_name" id="full_name" required
+                           class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition"
+                           placeholder="e.g. Ratin Sharma">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+                    <input type="email" name="email" id="email" required
+                           class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition"
+                           placeholder="you@example.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Username</label>
+                    <input type="text" name="username" id="username" required
+                           class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition"
+                           placeholder="Choose a username">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+                    <input type="password" name="password" id="password" required minlength="6"
+                           class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition"
+                           placeholder="Min 6 characters">
+                </div>
+                <button type="submit" id="reg-btn"
+                        class="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold text-sm hover:shadow-lg hover:shadow-indigo-200 transition-all mt-2">
+                    Create Account
+                </button>
+            </form>
+        </div>
+
+        <p class="text-center text-sm text-gray-500 mt-5">
+            Already have an account? <a href="/login" class="text-indigo-600 font-medium hover:underline">Sign in</a>
+        </p>
+    </div>
+
+<script>
+// Check if already logged in
+(function() {
+    var auth = localStorage.getItem('oa_auth');
+    if (auth) {
+        try { if (JSON.parse(auth).loggedIn) { window.location.href = '/'; return; } } catch(e) {}
+    }
+})();
+
+function showError(msg) {
+    var box = document.getElementById('error-box');
+    box.textContent = msg;
+    box.classList.remove('hidden');
+    document.getElementById('reg-card').classList.add('shake');
+    setTimeout(function() { document.getElementById('reg-card').classList.remove('shake'); }, 400);
+}
+
+function handleRegister(e) {
+    e.preventDefault();
+    var fullName = document.getElementById('full_name').value.trim();
+    var email = document.getElementById('email').value.trim();
+    var username = document.getElementById('username').value.trim();
+    var password = document.getElementById('password').value;
+    var btn = document.getElementById('reg-btn');
+
+    if (password.length < 6) { showError('Password must be at least 6 characters.'); return false; }
+    if (!username || !email || !fullName) { showError('All fields are required.'); return false; }
+
+    btn.disabled = true;
+    btn.textContent = 'Creating account...';
+
+    // Store user in localStorage
+    var users = JSON.parse(localStorage.getItem('oa_users') || '{}');
+    if (users[username]) {
+        btn.disabled = false;
+        btn.textContent = 'Create Account';
+        showError('Username already taken.');
+        return false;
+    }
+    users[username] = { name: fullName, email: email, password: password, created: new Date().toISOString() };
+    localStorage.setItem('oa_users', JSON.stringify(users));
+
+    // Auto-login
+    localStorage.setItem('oa_auth', JSON.stringify({
+        user: username, name: fullName, loggedIn: true, loginTime: new Date().toISOString()
+    }));
+
+    // Also try server-side registration
+    var formData = new FormData();
+    formData.append('full_name', fullName);
+    formData.append('email', email);
+    formData.append('username', username);
+    formData.append('password', password);
+    fetch('/register', { method: 'POST', body: formData, redirect: 'manual' })
+        .finally(function() { window.location.href = '/settings'; });
+
+    return false;
+}
+</script>
+</body>
+</html>

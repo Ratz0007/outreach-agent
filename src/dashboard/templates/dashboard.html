@@ -1,0 +1,1437 @@
+{% extends "base.html" %}
+{% set active = "home" %}
+{% block title %}Dashboard — Outreach Agent{% endblock %}
+
+{% block content %}
+<style>
+/* ── Dashboard-specific styles ────────────────────────────────── */
+.goal-ring-container {
+    position: relative;
+    width: 140px;
+    height: 140px;
+}
+.goal-ring-container svg {
+    transform: rotate(-90deg);
+}
+.goal-ring-bg {
+    stroke: var(--border);
+    fill: none;
+    stroke-width: 10;
+}
+.goal-ring-progress {
+    fill: none;
+    stroke-width: 10;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s ease-out;
+}
+.goal-ring-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+.goal-ring-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+}
+.goal-ring-subtitle {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+    font-weight: 500;
+}
+
+/* Priority Queue */
+.priority-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: var(--radius-lg);
+    transition: background 0.15s;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+}
+.priority-item:hover {
+    background: var(--bg-secondary);
+}
+.priority-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.priority-dot.urgent { background: var(--danger); }
+.priority-dot.warning { background: var(--warning); }
+.priority-dot.info { background: var(--accent); }
+
+/* Quick Actions */
+.quick-action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 12px;
+    border-radius: var(--radius-lg);
+    background: var(--bg-secondary);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+.quick-action-btn:hover {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+    transform: translateY(-1px);
+}
+.quick-action-btn .qa-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* KPI trend */
+.kpi-trend {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 2px 6px;
+    border-radius: 9999px;
+}
+.kpi-trend.up {
+    color: var(--success);
+    background: var(--success-soft);
+}
+.kpi-trend.down {
+    color: var(--danger);
+    background: var(--danger-soft);
+}
+.kpi-trend.neutral {
+    color: var(--text-muted);
+    background: var(--bg-secondary);
+}
+
+/* API Health indicator */
+.health-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+.health-dot.healthy { background: var(--success); box-shadow: 0 0 6px rgba(16, 185, 129, 0.4); }
+.health-dot.degraded { background: var(--warning); box-shadow: 0 0 6px rgba(245, 158, 11, 0.4); }
+.health-dot.down { background: var(--danger); box-shadow: 0 0 6px rgba(239, 68, 68, 0.4); }
+.health-dot.unknown { background: var(--text-muted); }
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Milestone badges */
+.milestone-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 10px;
+    border-radius: var(--radius-lg);
+    background: var(--bg-secondary);
+    min-width: 80px;
+    max-width: 90px;
+    text-align: center;
+    opacity: 0.4;
+    filter: grayscale(1);
+    transition: all 0.3s ease;
+}
+.milestone-badge.earned {
+    opacity: 1;
+    filter: none;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+}
+.milestone-badge.newly-earned {
+    animation: badgePop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    border-color: var(--warning);
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.2);
+}
+@keyframes badgePop {
+    0% { transform: scale(0.5); opacity: 0; }
+    70% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+}
+.milestone-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-secondary);
+}
+.milestone-badge.earned .milestone-icon {
+    background: var(--warning-soft);
+}
+.milestone-badge.earned .milestone-icon i {
+    color: var(--warning);
+}
+.milestone-icon i {
+    width: 16px;
+    height: 16px;
+    color: var(--text-muted);
+}
+.milestone-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    line-height: 1.2;
+}
+.milestone-badge.earned .milestone-label {
+    color: var(--text-primary);
+}
+</style>
+
+<!-- Header -->
+<div class="flex justify-between items-center mb-8">
+    <div>
+        <h1 class="text-2xl font-bold" style="color: var(--text-primary);">Dashboard</h1>
+        <p style="color: var(--text-muted);" class="text-sm mt-1">Welcome back{% if user %}, {{ user.full_name or user.username }}{% endif %}. Here's your pipeline overview.</p>
+    </div>
+    <div class="flex gap-2">
+        <a href="/outreach?status=draft" class="btn btn-primary">
+            <i data-lucide="file-edit" style="width:14px;height:14px;"></i>
+            Review {{ stats.drafts }} Drafts
+        </a>
+        <a href="/outreach?status=approved" class="btn btn-success">
+            <i data-lucide="send" style="width:14px;height:14px;"></i>
+            Send {{ stats.approved }} Ready
+        </a>
+    </div>
+</div>
+
+<!-- Goal Ring + KPI Cards Row -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+    <!-- Goal Progress Ring -->
+    <div class="lg:col-span-3 card p-6 flex flex-col items-center justify-center">
+        <div class="goal-ring-container">
+            {% set sent_pct = ((stats.sent_today / 20) * 100) if stats.sent_today <= 20 else 100 %}
+            {% set circumference = 2 * 3.14159 * 58 %}
+            {% set dash_offset = circumference - (circumference * sent_pct / 100) %}
+            <svg width="140" height="140" viewBox="0 0 140 140">
+                <circle class="goal-ring-bg" cx="70" cy="70" r="58"></circle>
+                <circle class="goal-ring-progress" cx="70" cy="70" r="58"
+                    stroke="{% if sent_pct >= 100 %}var(--success){% elif sent_pct >= 50 %}var(--accent){% else %}var(--warning){% endif %}"
+                    stroke-dasharray="{{ circumference }}"
+                    stroke-dashoffset="{{ dash_offset }}">
+                </circle>
+            </svg>
+            <div class="goal-ring-label">
+                <div class="goal-ring-value">{{ stats.sent_today }}</div>
+                <div class="goal-ring-subtitle">of 20 today</div>
+            </div>
+        </div>
+        <div class="mt-3 text-center">
+            <div class="text-sm font-semibold" style="color: var(--text-primary);">Daily Goal</div>
+            <div class="text-xs" style="color: var(--text-muted);">Messages sent</div>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="lg:col-span-9 grid grid-cols-2 md:grid-cols-3 gap-4">
+        <a href="/jobs" class="card p-5 hover:shadow-md transition-all cursor-pointer group" style="border-left: 4px solid var(--accent);">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-2xl font-bold font-data" style="color: var(--text-primary);">{{ stats.total_jobs }}</div>
+                    <div class="text-xs font-medium uppercase tracking-wide mt-1" style="color: var(--text-muted);">Jobs</div>
+                </div>
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: var(--accent-soft);">
+                    <i data-lucide="briefcase" style="width:18px;height:18px;color:var(--accent);"></i>
+                </div>
+            </div>
+            {% if stats.jobs_today > 0 %}
+            <div class="mt-2"><span class="kpi-trend up">
+                <svg width="10" height="10" viewBox="0 0 10 10"><path d="M5 2L8 6H2L5 2Z" fill="currentColor"/></svg>
+                +{{ stats.jobs_today }} today
+            </span></div>
+            {% endif %}
+        </a>
+
+        <a href="/contacts" class="card p-5 hover:shadow-md transition-all cursor-pointer group" style="border-left: 4px solid var(--info);">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-2xl font-bold font-data" style="color: var(--text-primary);">{{ stats.total_contacts }}</div>
+                    <div class="text-xs font-medium uppercase tracking-wide mt-1" style="color: var(--text-muted);">Contacts</div>
+                </div>
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: var(--info-soft);">
+                    <i data-lucide="users" style="width:18px;height:18px;color:var(--info);"></i>
+                </div>
+            </div>
+        </a>
+
+        <a href="/outreach?status=draft" class="card p-5 hover:shadow-md transition-all cursor-pointer group" style="border-left: 4px solid var(--warning);">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-2xl font-bold font-data" style="color: var(--text-primary);">{{ stats.drafts }}</div>
+                    <div class="text-xs font-medium uppercase tracking-wide mt-1" style="color: var(--text-muted);">Drafts</div>
+                </div>
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: var(--warning-soft);">
+                    <i data-lucide="file-edit" style="width:18px;height:18px;color:var(--warning);"></i>
+                </div>
+            </div>
+        </a>
+
+        <a href="/outreach?status=sent" class="card p-5 hover:shadow-md transition-all cursor-pointer group" style="border-left: 4px solid var(--success);">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-2xl font-bold font-data" style="color: var(--text-primary);">{{ stats.sent }}</div>
+                    <div class="text-xs font-medium uppercase tracking-wide mt-1" style="color: var(--text-muted);">Sent</div>
+                </div>
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: var(--success-soft);">
+                    <i data-lucide="send" style="width:18px;height:18px;color:var(--success);"></i>
+                </div>
+            </div>
+            {% if stats.sent_today > 0 %}
+            <div class="mt-2"><span class="kpi-trend up">{{ stats.sent_today }} sent today</span></div>
+            {% endif %}
+        </a>
+
+        <a href="/outreach?status=replied" class="card p-5 hover:shadow-md transition-all cursor-pointer group" style="border-left: 4px solid #7c3aed;">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-2xl font-bold font-data" style="color: var(--text-primary);">{{ stats.replies }}</div>
+                    <div class="text-xs font-medium uppercase tracking-wide mt-1" style="color: var(--text-muted);">Replies</div>
+                </div>
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: rgba(124,58,237,0.1);">
+                    <i data-lucide="message-circle" style="width:18px;height:18px;color:#7c3aed;"></i>
+                </div>
+            </div>
+        </a>
+
+        <a href="/analytics" class="card p-5 hover:shadow-md transition-all cursor-pointer group" style="border-left: 4px solid #f97316;">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-2xl font-bold font-data" style="color: var(--text-primary);">{{ stats.referrals }}</div>
+                    <div class="text-xs font-medium uppercase tracking-wide mt-1" style="color: var(--text-muted);">Referrals</div>
+                </div>
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: rgba(249,115,22,0.1);">
+                    <i data-lucide="user-plus" style="width:18px;height:18px;color:#f97316;"></i>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- Quick Actions + Priority Queue Row -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+    <!-- Quick Actions -->
+    <div class="lg:col-span-4 card p-6">
+        <div class="flex items-center gap-2 mb-5">
+            <i data-lucide="zap" style="width:18px;height:18px;color:var(--accent);"></i>
+            <div>
+                <h2 class="font-semibold" style="color: var(--text-primary);">Quick Actions</h2>
+                <p class="text-xs" style="color: var(--text-muted);">Run pipeline stages</p>
+            </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+            <button class="quick-action-btn" onclick="openAddJobModal()">
+                <div class="qa-icon" style="background: var(--success-soft);"><i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--success);"></i></div>
+                Add Job
+            </button>
+            <button class="quick-action-btn" onclick="openImportCsvModal()">
+                <div class="qa-icon" style="background: var(--info-soft);"><i data-lucide="upload" style="width:18px;height:18px;color:var(--info);"></i></div>
+                Import CSV
+            </button>
+            <button class="quick-action-btn" onclick="runQuickAction('source', this)">
+                <div class="qa-icon" style="background: var(--accent-soft);"><i data-lucide="search" style="width:18px;height:18px;color:var(--accent);"></i></div>
+                Source Jobs
+            </button>
+            <button class="quick-action-btn" onclick="runQuickAction('generate', this)">
+                <div class="qa-icon" style="background: rgba(124,58,237,0.1);"><i data-lucide="sparkles" style="width:18px;height:18px;color:#7c3aed;"></i></div>
+                Generate Msgs
+            </button>
+            <a href="/outreach?status=draft" class="quick-action-btn">
+                <div class="qa-icon" style="background: var(--warning-soft);"><i data-lucide="file-edit" style="width:18px;height:18px;color:var(--warning);"></i></div>
+                Review Drafts
+            </a>
+            <button class="quick-action-btn" onclick="runQuickAction('check-replies', this)">
+                <div class="qa-icon" style="background: var(--success-soft);"><i data-lucide="inbox" style="width:18px;height:18px;color:var(--success);"></i></div>
+                Check Replies
+            </button>
+            <button class="quick-action-btn" onclick="runQuickAction('enrich', this)">
+                <div class="qa-icon" style="background: rgba(249,115,22,0.1);"><i data-lucide="users" style="width:18px;height:18px;color:#f97316;"></i></div>
+                Enrich
+            </button>
+            <button class="quick-action-btn" onclick="window.openSageChat('What should I focus on today?')">
+                <div class="qa-icon" style="background: linear-gradient(135deg, var(--accent-soft), rgba(124,58,237,0.1));"><i data-lucide="brain" style="width:18px;height:18px;color:var(--accent);"></i></div>
+                Ask Sage
+            </button>
+        </div>
+    </div>
+
+    <!-- Priority Action Queue -->
+    <div class="lg:col-span-8 card p-6">
+        <div class="flex items-center justify-between mb-5">
+            <div class="flex items-center gap-2">
+                <i data-lucide="list-checks" style="width:18px;height:18px;color:var(--danger);"></i>
+                <div>
+                    <h2 class="font-semibold" style="color: var(--text-primary);">Priority Queue</h2>
+                    <p class="text-xs" style="color: var(--text-muted);">Next actions requiring attention</p>
+                </div>
+            </div>
+            <span class="text-xs font-medium px-2.5 py-1 rounded-full" style="background: var(--danger-soft); color: var(--danger);" id="queue-count">
+                {{ stats.priority_queue|length }} items
+            </span>
+        </div>
+        <div class="space-y-1 max-h-64 overflow-y-auto" id="priority-queue">
+            {% if stats.priority_queue %}
+                {% for item in stats.priority_queue[:8] %}
+                <a href="{{ item.link }}" class="priority-item">
+                    <div class="priority-dot {{ item.urgency }}"></div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-medium truncate" style="color: var(--text-primary);">{{ item.title }}</div>
+                        <div class="text-xs truncate" style="color: var(--text-muted);">{{ item.desc }}</div>
+                    </div>
+                    <div class="text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0"
+                         style="background: {% if item.urgency == 'urgent' %}var(--danger-soft); color: var(--danger){% elif item.urgency == 'warning' %}var(--warning-soft); color: var(--warning){% else %}var(--accent-soft); color: var(--accent){% endif %};">
+                        {{ item.badge }}
+                    </div>
+                </a>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-8">
+                    <i data-lucide="check-circle-2" style="width:32px;height:32px;color:var(--success);margin:0 auto;display:block;"></i>
+                    <p class="text-sm mt-2" style="color: var(--text-muted);">All caught up! No pending actions.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <!-- Pipeline Funnel Chart -->
+    <div class="card p-6">
+        <h2 class="font-semibold mb-1" style="color: var(--text-primary);">Pipeline Funnel</h2>
+        <p class="text-xs mb-4" style="color: var(--text-muted);">Jobs by current stage</p>
+        <div style="height: 220px;">
+            <canvas id="pipelineChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Weekly Activity Chart -->
+    <div class="card p-6">
+        <h2 class="font-semibold mb-1" style="color: var(--text-primary);">Weekly Activity</h2>
+        <p class="text-xs mb-4" style="color: var(--text-muted);">Jobs sourced vs messages created (last 7 days)</p>
+        <div style="height: 220px;">
+            <canvas id="activityChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <!-- Variant Performance Chart -->
+    <div class="card p-6">
+        <h2 class="font-semibold mb-1" style="color: var(--text-primary);">Variant Performance</h2>
+        <p class="text-xs mb-4" style="color: var(--text-muted);">Sends vs replies by A/B variant</p>
+        <div style="height: 220px;">
+            <canvas id="variantChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Outreach Status Donut -->
+    <div class="card p-6">
+        <h2 class="font-semibold mb-1" style="color: var(--text-primary);">Outreach Breakdown</h2>
+        <p class="text-xs mb-4" style="color: var(--text-muted);">Messages by current status</p>
+        <div style="height: 220px;">
+            <canvas id="outreachDonut"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Schedule + Activity + LinkedIn Quota Row -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+    <!-- Automation Schedule -->
+    <div class="card p-6">
+        <div class="flex items-center gap-2 mb-5">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: var(--accent-soft);">
+                <i data-lucide="clock" style="width:16px;height:16px;color:var(--accent);"></i>
+            </div>
+            <div>
+                <h2 class="font-semibold" style="color: var(--text-primary);">Daily Schedule</h2>
+                <p class="text-xs" style="color: var(--text-muted);">Automated pipeline stages</p>
+            </div>
+        </div>
+        <div class="space-y-3">
+            {% set schedule_items = [
+                (stats.schedule.source_jobs or '08:00', 'Source Jobs', 'Adzuna API search', 'var(--accent)'),
+                (stats.schedule.enrich_contacts or '08:30', 'Enrich Contacts', 'Hunter + Apollo + Snov', 'var(--info)'),
+                (stats.schedule.generate_messages or '09:00', 'Generate Drafts', 'Claude AI personalisation', '#7c3aed'),
+                (stats.schedule.send_outreach or '10:00', 'Send Outreach', 'Gmail + LinkedIn', 'var(--success)'),
+                (stats.schedule.check_replies or '17:00', 'Check Replies', 'Gmail inbox scan', 'var(--warning)'),
+                (stats.schedule.daily_digest or '20:00', 'Daily Digest', 'KPI summary email', '#f97316'),
+            ] %}
+            {% for time, name, desc, color in schedule_items %}
+            <div class="flex items-center gap-3">
+                <div class="w-16 text-xs font-mono font-bold rounded-lg px-2 py-1 text-center" style="color: {{ color }}; background: color-mix(in srgb, {{ color }} 10%, transparent);">{{ time }}</div>
+                <div class="flex-1">
+                    <div class="text-sm font-medium" style="color: var(--text-secondary);">{{ name }}</div>
+                    <div class="text-xs" style="color: var(--text-muted);">{{ desc }}</div>
+                </div>
+                <div class="w-2 h-2 rounded-full" style="background: {{ color }};"></div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Today's Activity -->
+    <div class="card p-6">
+        <div class="flex items-center gap-2 mb-5">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: var(--success-soft);">
+                <i data-lucide="activity" style="width:16px;height:16px;color:var(--success);"></i>
+            </div>
+            <div>
+                <h2 class="font-semibold" style="color: var(--text-primary);">Today's Activity</h2>
+                <p class="text-xs" style="color: var(--text-muted);">Real-time status</p>
+            </div>
+        </div>
+        <div class="space-y-1">
+            {% set activity_items = [
+                ('/jobs', 'Jobs sourced', stats.jobs_today, false, 'var(--accent)'),
+                ('/outreach?status=sent', 'Messages sent', stats.sent_today|string + ' / 20', false, 'var(--success)'),
+                ('/outreach?status=draft', 'Drafts pending', stats.drafts, stats.drafts > 0, 'var(--warning)'),
+                ('/outreach?status=approved', 'Approved & ready', stats.approved, stats.approved > 0, 'var(--info)'),
+                ('/contacts', 'Follow-ups due', stats.follow_ups_due, stats.follow_ups_due > 0, 'var(--danger)'),
+                ('/cvs', 'CVs generated', stats.cvs, false, '#7c3aed'),
+            ] %}
+            {% for link, label, value, highlight, color in activity_items %}
+            <a href="{{ link }}" class="flex justify-between rounded-lg px-3 py-2.5 -mx-3 transition-all group" style="{% if highlight %}background: var(--bg-secondary);{% endif %}"
+               onmouseover="this.style.background='var(--bg-secondary)'" onmouseout="this.style.background='{% if highlight %}var(--bg-secondary){% endif %}'">
+                <span class="text-sm" style="color: var(--text-muted);">{{ label }}</span>
+                <span class="text-sm font-semibold font-data" style="color: {% if highlight %}{{ color }}{% else %}var(--text-primary){% endif %};">{{ value }}</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- LinkedIn Quota -->
+    <div class="card p-6">
+        <div class="flex items-center gap-2 mb-5">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: rgba(10,102,194,0.1);">
+                <svg width="16" height="16" fill="#0a66c2" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+            </div>
+            <div>
+                <h2 class="font-semibold" style="color: var(--text-primary);">LinkedIn Quota</h2>
+                <p class="text-xs" style="color: var(--text-muted);">Connection limits</p>
+            </div>
+        </div>
+        <div class="space-y-5">
+            <div>
+                <div class="flex justify-between mb-2">
+                    <span class="text-sm" style="color: var(--text-muted);">Daily Invites</span>
+                    <span class="text-sm font-semibold font-data" style="color: var(--text-primary);">{{ stats.linkedin.daily_sent }} / {{ stats.linkedin.daily_limit }}</span>
+                </div>
+                <div class="w-full rounded-full h-3" style="background: var(--bg-secondary);">
+                    {% set daily_pct = (stats.linkedin.daily_sent / stats.linkedin.daily_limit * 100) if stats.linkedin.daily_limit else 0 %}
+                    <div class="h-3 rounded-full transition-all"
+                         style="width: {{ [daily_pct, 100]|min }}%;
+                                background: {% if daily_pct >= 100 %}var(--danger){% elif daily_pct >= 70 %}var(--warning){% else %}var(--success){% endif %};"></div>
+                </div>
+            </div>
+            <div>
+                <div class="flex justify-between mb-2">
+                    <span class="text-sm" style="color: var(--text-muted);">Weekly Invites</span>
+                    <span class="text-sm font-semibold font-data" style="color: var(--text-primary);">{{ stats.linkedin.weekly_sent }} / {{ stats.linkedin.weekly_limit }}</span>
+                </div>
+                <div class="w-full rounded-full h-3" style="background: var(--bg-secondary);">
+                    {% set weekly_pct = (stats.linkedin.weekly_sent / stats.linkedin.weekly_limit * 100) if stats.linkedin.weekly_limit else 0 %}
+                    <div class="h-3 rounded-full transition-all"
+                         style="width: {{ [weekly_pct, 100]|min }}%;
+                                background: {% if weekly_pct >= 100 %}var(--danger){% elif weekly_pct >= 70 %}var(--warning){% else %}var(--info){% endif %};"></div>
+                </div>
+            </div>
+            <div class="text-xs pt-1" style="color: var(--text-muted);">Mode: Manual copy-paste</div>
+        </div>
+    </div>
+</div>
+
+<!-- API Health Status -->
+<div class="card p-6 mb-8">
+    <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+            <i data-lucide="server" style="width:18px;height:18px;color:var(--text-muted);"></i>
+            <div>
+                <h2 class="font-semibold" style="color: var(--text-primary);">API Health</h2>
+                <p class="text-xs" style="color: var(--text-muted);">Integration status overview</p>
+            </div>
+        </div>
+        <button onclick="refreshHealth()" class="text-xs px-3 py-1.5 rounded-lg transition-all" style="background: var(--bg-secondary); color: var(--text-muted);"
+                onmouseover="this.style.background='var(--accent-soft)';this.style.color='var(--accent)'" onmouseout="this.style.background='var(--bg-secondary)';this.style.color='var(--text-muted)'">
+            <i data-lucide="refresh-cw" style="width:12px;height:12px;display:inline;vertical-align:-2px;"></i> Refresh
+        </button>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3" id="api-health">
+        {% for api in stats.api_health %}
+        <div class="flex items-center gap-2.5 p-3 rounded-lg" style="background: var(--bg-secondary);">
+            <span class="health-dot {{ api.status }}"></span>
+            <div>
+                <div class="text-xs font-semibold" style="color: var(--text-primary);">{{ api.name }}</div>
+                <div class="text-xs" style="color: var(--text-muted);">{{ api.detail }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Activity Timeline + Memory Row -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+    <!-- Recent Activity Timeline -->
+    <div class="lg:col-span-7 card p-6">
+        <div class="flex items-center justify-between mb-5">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: var(--accent-soft);">
+                    <i data-lucide="clock" style="width:16px;height:16px;color:var(--accent);"></i>
+                </div>
+                <div>
+                    <h2 class="font-semibold" style="color: var(--text-primary);">Activity Timeline</h2>
+                    <p class="text-xs" style="color: var(--text-muted);">Recent actions and events</p>
+                </div>
+            </div>
+            <a href="/activity" class="text-xs px-3 py-1.5 rounded-lg" style="background: var(--bg-secondary); color: var(--text-muted);">View All</a>
+        </div>
+        <div class="space-y-0 max-h-80 overflow-y-auto" id="activity-timeline" style="padding-left:16px;">
+            {% if stats.recent_activity is defined and stats.recent_activity %}
+                {% for act in stats.recent_activity[:10] %}
+                <div class="flex gap-3 pb-4 relative" style="border-left:2px solid var(--border);margin-left:4px;padding-left:16px;">
+                    <div class="absolute -left-[7px] top-1 w-3 h-3 rounded-full" style="background:
+                        {% if act.type == 'sent' %}var(--success)
+                        {% elif act.type == 'reply' %}var(--accent)
+                        {% elif act.type == 'draft' %}var(--warning)
+                        {% elif act.type == 'job' %}var(--info)
+                        {% elif act.type == 'applied' %}#7c3aed
+                        {% else %}var(--text-muted){% endif %};border:2px solid var(--bg-surface);"></div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm" style="color: var(--text-primary);">{{ act.title }}</div>
+                        <div class="text-xs" style="color: var(--text-muted);">{{ act.desc }}</div>
+                    </div>
+                    <div class="text-xs font-mono flex-shrink-0" style="color: var(--text-muted);">{{ act.time }}</div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-8" style="border-left:none;margin-left:0;padding-left:0;">
+                    <i data-lucide="activity" style="width:28px;height:28px;color:var(--text-muted);margin:0 auto;display:block;"></i>
+                    <p class="text-xs mt-2" style="color: var(--text-muted);">No recent activity yet. Start by sourcing jobs!</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Pipeline Memory / Profile Summary -->
+    <div class="lg:col-span-5 card p-6">
+        <div class="flex items-center justify-between mb-5">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: rgba(124,58,237,0.1);">
+                    <i data-lucide="brain" style="width:16px;height:16px;color:#7c3aed;"></i>
+                </div>
+                <div>
+                    <h2 class="font-semibold" style="color: var(--text-primary);">Pipeline Memory</h2>
+                    <p class="text-xs" style="color: var(--text-muted);">What the system knows</p>
+                </div>
+            </div>
+            <a href="/settings" class="text-xs px-3 py-1.5 rounded-lg" style="background: var(--bg-secondary); color: var(--text-muted);">Edit</a>
+        </div>
+        <div class="space-y-4">
+            <!-- Search Preferences -->
+            <div class="p-3 rounded-lg" style="background: var(--bg-secondary);">
+                <div class="flex items-center gap-2 mb-2">
+                    <i data-lucide="target" style="width:13px;height:13px;color:var(--accent);"></i>
+                    <span class="text-xs font-semibold uppercase tracking-wide" style="color: var(--text-muted);">Targeting</span>
+                </div>
+                <div class="text-sm" style="color: var(--text-primary);">
+                    {% if stats.memory is defined and stats.memory.roles %}
+                        {{ stats.memory.roles[:3]|join(', ') }}
+                    {% else %}
+                        AE, Sales Manager, Founding AE
+                    {% endif %}
+                </div>
+                <div class="text-xs mt-1" style="color: var(--text-muted);">
+                    {% if stats.memory is defined and stats.memory.locations %}
+                        {{ stats.memory.locations[:3]|join(', ') }}
+                    {% else %}
+                        Ireland, Remote EU, Dublin
+                    {% endif %}
+                </div>
+            </div>
+            <!-- Performance snapshot -->
+            <div class="p-3 rounded-lg" style="background: var(--bg-secondary);">
+                <div class="flex items-center gap-2 mb-2">
+                    <i data-lucide="trending-up" style="width:13px;height:13px;color:var(--success);"></i>
+                    <span class="text-xs font-semibold uppercase tracking-wide" style="color: var(--text-muted);">Performance</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                        <div class="text-lg font-bold font-data" style="color: var(--text-primary);">{{ stats.sent or 0 }}</div>
+                        <div class="text-xs" style="color: var(--text-muted);">Sent</div>
+                    </div>
+                    <div>
+                        <div class="text-lg font-bold font-data" style="color: var(--accent);">{{ stats.replies or 0 }}</div>
+                        <div class="text-xs" style="color: var(--text-muted);">Replies</div>
+                    </div>
+                    <div>
+                        <div class="text-lg font-bold font-data" style="color: var(--success);">
+                            {% if stats.sent and stats.sent > 0 %}{{ ((stats.replies or 0) / stats.sent * 100)|round(0)|int }}%{% else %}0%{% endif %}
+                        </div>
+                        <div class="text-xs" style="color: var(--text-muted);">Rate</div>
+                    </div>
+                </div>
+            </div>
+            <!-- Best variant -->
+            <div class="p-3 rounded-lg" style="background: var(--bg-secondary);">
+                <div class="flex items-center gap-2 mb-2">
+                    <i data-lucide="trophy" style="width:13px;height:13px;color:var(--warning);"></i>
+                    <span class="text-xs font-semibold uppercase tracking-wide" style="color: var(--text-muted);">Top Variant</span>
+                </div>
+                {% if stats.variant_chart is defined and stats.variant_chart.labels %}
+                <div class="text-sm" style="color: var(--text-primary);">{{ stats.variant_chart.labels[0] }}</div>
+                <div class="text-xs" style="color: var(--text-muted);">Best performing message style</div>
+                {% else %}
+                <div class="text-sm" style="color: var(--text-muted);">Not enough data yet</div>
+                {% endif %}
+            </div>
+            <!-- Activity Score -->
+            <div class="p-3 rounded-lg" style="background: linear-gradient(135deg, var(--accent-soft), rgba(124,58,237,0.1));">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-xs font-semibold uppercase tracking-wide" style="color: var(--accent);">Activity Score</div>
+                        <div class="text-2xl font-bold font-data mt-1" style="color: var(--text-primary);">
+                            {% set score = (stats.sent_today or 0) * 5 + (stats.jobs_today or 0) * 2 + (stats.drafts or 0) + (stats.replies or 0) * 10 %}
+                            {{ [score, 100]|min }}
+                        </div>
+                    </div>
+                    <div class="w-12 h-12 rounded-full flex items-center justify-center" style="background: var(--accent-gradient);">
+                        <i data-lucide="flame" style="width:20px;height:20px;color:white;"></i>
+                    </div>
+                </div>
+                <div class="w-full rounded-full h-2 mt-2" style="background: rgba(255,255,255,0.2);">
+                    {% set score = (stats.sent_today or 0) * 5 + (stats.jobs_today or 0) * 2 + (stats.drafts or 0) + (stats.replies or 0) * 10 %}
+                    <div class="h-2 rounded-full" style="width: {{ [score, 100]|min }}%; background: var(--accent);"></div>
+                </div>
+                <div class="text-xs mt-1" style="color: var(--text-muted);">Keep going! Send more messages to boost your score.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Streak Tracker + Weekly Goals -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+    <!-- Streak Tracker -->
+    <div class="lg:col-span-4 card p-6">
+        <div class="flex items-center gap-2 mb-5">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: var(--warning-soft);">
+                <i data-lucide="flame" style="width:16px;height:16px;color:var(--warning);"></i>
+            </div>
+            <div>
+                <h2 class="font-semibold" style="color: var(--text-primary);">Activity Streak</h2>
+                <p class="text-xs" style="color: var(--text-muted);">Consecutive active days</p>
+            </div>
+        </div>
+        <div class="text-center mb-4">
+            <div class="text-4xl font-bold font-data" style="color: var(--warning);" id="streak-count">0</div>
+            <div class="text-xs font-medium mt-1" style="color: var(--text-muted);">day streak</div>
+        </div>
+        <!-- Week heatmap -->
+        <div class="flex justify-center gap-2 mb-4" id="streak-heatmap">
+            {% set days = ['M','T','W','T','F','S','S'] %}
+            {% for d in days %}
+            <div class="flex flex-col items-center gap-1">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold streak-day"
+                     style="background: var(--bg-secondary); color: var(--text-muted);"
+                     data-day="{{ loop.index0 }}">
+                    {{ d }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="text-center">
+            <div class="text-xs px-3 py-1.5 rounded-full inline-flex items-center gap-1" id="streak-message"
+                 style="background: var(--bg-secondary); color: var(--text-muted);">
+                <i data-lucide="target" style="width:11px;height:11px;"></i>
+                <span>Send at least 1 message today to keep your streak!</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Weekly Goals -->
+    <div class="lg:col-span-8 card p-6">
+        <div class="flex items-center justify-between mb-5">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: var(--success-soft);">
+                    <i data-lucide="trophy" style="width:16px;height:16px;color:var(--success);"></i>
+                </div>
+                <div>
+                    <h2 class="font-semibold" style="color: var(--text-primary);">Weekly Goals</h2>
+                    <p class="text-xs" style="color: var(--text-muted);">Track your weekly targets</p>
+                </div>
+            </div>
+            <div class="text-xs font-mono px-2 py-1 rounded-lg" style="background: var(--bg-secondary); color: var(--text-muted);">
+                Week {{ stats.week_number if stats.week_number is defined else 'N/A' }}
+            </div>
+        </div>
+        <div class="space-y-4">
+            {% set weekly_goals = [
+                ('Messages Sent', stats.weekly_sent if stats.weekly_sent is defined else stats.sent or 0, 100, 'var(--accent)', 'send'),
+                ('Jobs Sourced', stats.weekly_jobs if stats.weekly_jobs is defined else stats.total_jobs or 0, 50, 'var(--info)', 'briefcase'),
+                ('Replies Received', stats.weekly_replies if stats.weekly_replies is defined else stats.replies or 0, 15, 'var(--success)', 'message-circle'),
+                ('Applications Submitted', stats.weekly_applied if stats.weekly_applied is defined else stats.pipeline.applied or 0, 20, '#7c3aed', 'file-check'),
+            ] %}
+            {% for label, current, target, color, icon in weekly_goals %}
+            {% set pct = ((current / target) * 100) if target > 0 else 0 %}
+            <div>
+                <div class="flex items-center justify-between mb-1.5">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="{{ icon }}" style="width:13px;height:13px;color:{{ color }};"></i>
+                        <span class="text-sm font-medium" style="color: var(--text-secondary);">{{ label }}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-bold font-data" style="color: var(--text-primary);">{{ current }}</span>
+                        <span class="text-xs" style="color: var(--text-muted);">/ {{ target }}</span>
+                        {% if pct >= 100 %}
+                        <span class="text-xs px-1.5 py-0.5 rounded-full font-bold" style="background: var(--success-soft); color: var(--success);">Done!</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="w-full rounded-full h-2.5" style="background: var(--bg-secondary);">
+                    <div class="h-2.5 rounded-full transition-all" style="width: {{ [pct, 100]|min }}%; background: {{ color }};{% if pct >= 100 %} box-shadow: 0 0 8px color-mix(in srgb, {{ color }} 40%, transparent);{% endif %}"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="mt-4 p-3 rounded-lg text-center" style="background: var(--bg-secondary);">
+            {% set total_pct = 0 %}
+            {% for label, current, target, color, icon in weekly_goals %}
+                {% set total_pct = total_pct + (([((current / target) * 100) if target > 0 else 0, 100]|min) / 4) %}
+            {% endfor %}
+            <div class="text-xs font-semibold" style="color: var(--text-muted);">
+                Overall Weekly Progress:
+                <span class="font-data" style="color: {% if total_pct >= 80 %}var(--success){% elif total_pct >= 50 %}var(--accent){% else %}var(--warning){% endif %};">
+                    {{ total_pct|round(0)|int }}%
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Milestones / Achievements -->
+<div class="card p-6 mb-8">
+    <div class="flex items-center justify-between mb-5">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, var(--warning-soft), rgba(249,115,22,0.1));">
+                <i data-lucide="award" style="width:16px;height:16px;color:var(--warning);"></i>
+            </div>
+            <div>
+                <h2 class="font-semibold" style="color: var(--text-primary);">Milestones</h2>
+                <p class="text-xs" style="color: var(--text-muted);">Unlock achievements as you progress</p>
+            </div>
+        </div>
+        <span id="milestone-counter" class="text-xs font-data px-2.5 py-1 rounded-full" style="background: var(--warning-soft); color: var(--warning);">0/12</span>
+    </div>
+    <div class="flex flex-wrap gap-3" id="milestone-badges">
+        <!-- Populated by JS -->
+    </div>
+</div>
+
+<!-- Top Jobs -->
+<div class="card p-6 mb-8">
+    <div class="flex justify-between items-center mb-4">
+        <div>
+            <h2 class="font-semibold" style="color: var(--text-primary);">Top Jobs by Fit Score</h2>
+            <p class="text-xs mt-0.5" style="color: var(--text-muted);">Best matching opportunities</p>
+        </div>
+        <a href="/jobs" class="btn btn-secondary" style="font-size:12px;padding:5px 14px;">View All Jobs</a>
+    </div>
+    <div class="space-y-1">
+        {% for job in stats.recent_jobs[:8] %}
+        <a href="/jobs#job-{{ job.id }}" class="flex items-center justify-between rounded-lg px-3 py-2.5 -mx-3 transition-all group"
+           onmouseover="this.style.background='var(--bg-secondary)'" onmouseout="this.style.background=''">
+            <div class="flex items-center gap-3">
+                <div class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-xs font-bold font-data"
+                    style="{% if job.fit_score >= 8 %}background: var(--success-soft); color: var(--success); border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
+                    {% elif job.fit_score >= 5 %}background: var(--warning-soft); color: var(--warning); border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+                    {% else %}background: var(--bg-secondary); color: var(--text-muted); border: 1px solid var(--border);{% endif %}">
+                    {{ job.fit_score or '?' }}
+                </div>
+                <div>
+                    <span class="font-medium" style="color: var(--text-primary);">{{ job.company }}</span>
+                    <span class="ml-2 text-sm" style="color: var(--text-muted);">{{ job.role }}</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-xs" style="color: var(--text-muted);">{{ job.location or '' }}</span>
+                <span class="badge badge-{{ job.status }}">{{ job.status }}</span>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Charts JavaScript -->
+<script>
+// KPI count-up animation
+(function() {
+    // Animate KPI numbers
+    var kpis = document.querySelectorAll('.font-data.text-2xl');
+    kpis.forEach(function(el, idx) {
+        var target = parseInt(el.textContent, 10);
+        if (isNaN(target) || target === 0) return;
+        el.textContent = '0';
+        var duration = 600;
+        var delay = idx * 80;
+        setTimeout(function() {
+            var start = performance.now();
+            function tick(now) {
+                var elapsed = now - start;
+                var progress = Math.min(elapsed / duration, 1);
+                var eased = 1 - Math.pow(1 - progress, 3);
+                el.textContent = Math.round(eased * target);
+                if (progress < 1) requestAnimationFrame(tick);
+            }
+            requestAnimationFrame(tick);
+        }, delay);
+    });
+
+    // Animate goal ring number
+    var goalVal = document.querySelector('.goal-ring-value');
+    if (goalVal) {
+        var gTarget = parseInt(goalVal.textContent, 10);
+        if (!isNaN(gTarget) && gTarget > 0) {
+            goalVal.textContent = '0';
+            var gStart = performance.now();
+            function gTick(now) {
+                var elapsed = now - gStart;
+                var progress = Math.min(elapsed / 800, 1);
+                var eased = 1 - Math.pow(1 - progress, 3);
+                goalVal.textContent = Math.round(eased * gTarget);
+                if (progress < 1) requestAnimationFrame(gTick);
+            }
+            requestAnimationFrame(gTick);
+        }
+    }
+
+    // Animate weekly goal progress bars
+    document.querySelectorAll('.h-2\\.5.rounded-full.transition-all').forEach(function(bar) {
+        var finalWidth = bar.style.width;
+        bar.style.width = '0%';
+        bar.style.transition = 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+        setTimeout(function() { bar.style.width = finalWidth; }, 200);
+    });
+})();
+
+// Skeleton loaders for charts — show while Chart.js initializes
+(function() {
+    var canvases = document.querySelectorAll('canvas');
+    canvases.forEach(function(c) {
+        var skel = document.createElement('div');
+        skel.className = 'skeleton skeleton-chart';
+        skel.style.cssText = 'position:absolute;inset:0;border-radius:var(--radius-lg);z-index:1;';
+        c.parentElement.style.position = 'relative';
+        c.parentElement.appendChild(skel);
+        c._skeleton = skel;
+    });
+})();
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Remove chart skeletons after render
+    setTimeout(function() {
+        document.querySelectorAll('canvas').forEach(function(c) {
+            if (c._skeleton) {
+                c._skeleton.style.opacity = '0';
+                c._skeleton.style.transition = 'opacity 0.3s';
+                setTimeout(function() { c._skeleton.remove(); }, 300);
+            }
+        });
+    }, 500);
+    const chartFont = { family: 'Plus Jakarta Sans', size: 11 };
+    Chart.defaults.font.family = 'Plus Jakarta Sans';
+    Chart.defaults.font.size = 11;
+
+    const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--border').trim() || '#f3f4f6';
+
+    // Pipeline Funnel
+    new Chart(document.getElementById('pipelineChart'), {
+        type: 'bar',
+        data: {
+            labels: ['Shortlisted', 'Contacted', 'Follow Up', 'Applied', 'Interviewing', 'Offer', 'Rejected'],
+            datasets: [{
+                data: [{{ stats.pipeline.shortlisted }}, {{ stats.pipeline.contacted }}, {{ stats.pipeline.follow_up }}, {{ stats.pipeline.applied }}, {{ stats.pipeline.interviewing }}, {{ stats.pipeline.offer }}, {{ stats.pipeline.rejected }}],
+                backgroundColor: ['#818cf8', '#60a5fa', '#fbbf24', '#a78bfa', '#fb923c', '#34d399', '#f87171'],
+                borderRadius: 8,
+                borderSkipped: false,
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: gridColor }, ticks: { font: chartFont } },
+                x: { grid: { display: false }, ticks: { font: chartFont } }
+            }
+        }
+    });
+
+    // Weekly Activity
+    new Chart(document.getElementById('activityChart'), {
+        type: 'line',
+        data: {
+            labels: {{ stats.activity_chart.days | tojson }},
+            datasets: [
+                {
+                    label: 'Jobs Sourced',
+                    data: {{ stats.activity_chart.jobs | tojson }},
+                    borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.08)',
+                    tension: 0.4, fill: true, pointRadius: 4, pointBackgroundColor: '#6366f1',
+                },
+                {
+                    label: 'Messages Created',
+                    data: {{ stats.activity_chart.sent | tojson }},
+                    borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.08)',
+                    tension: 0.4, fill: true, pointRadius: 4, pointBackgroundColor: '#10b981',
+                }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom', labels: { font: chartFont, usePointStyle: true, pointStyle: 'circle', padding: 16 } } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: gridColor }, ticks: { font: chartFont } },
+                x: { grid: { display: false }, ticks: { font: chartFont } }
+            }
+        }
+    });
+
+    // Variant Performance
+    new Chart(document.getElementById('variantChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ stats.variant_chart.labels | tojson }},
+            datasets: [
+                { label: 'Sends', data: {{ stats.variant_chart.sends | tojson }}, backgroundColor: '#c7d2fe', borderRadius: 6, borderSkipped: false },
+                { label: 'Replies', data: {{ stats.variant_chart.replies | tojson }}, backgroundColor: '#6366f1', borderRadius: 6, borderSkipped: false }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom', labels: { font: chartFont, usePointStyle: true, pointStyle: 'circle', padding: 16 } } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: gridColor }, ticks: { font: chartFont } },
+                x: { grid: { display: false }, ticks: { font: chartFont } }
+            }
+        }
+    });
+
+    // Outreach Status Donut
+    const outreachLabels = {{ stats.outreach_chart.labels | tojson }};
+    const colorMap = { draft: '#9ca3af', approved: '#60a5fa', sent: '#34d399', replied: '#a78bfa', no_reply: '#fbbf24' };
+    new Chart(document.getElementById('outreachDonut'), {
+        type: 'doughnut',
+        data: {
+            labels: outreachLabels.map(l => l.charAt(0).toUpperCase() + l.slice(1)),
+            datasets: [{
+                data: {{ stats.outreach_chart.counts | tojson }},
+                backgroundColor: outreachLabels.map(l => colorMap[l] || '#d1d5db'),
+                borderWidth: 0,
+                hoverOffset: 6,
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            cutout: '65%',
+            plugins: { legend: { position: 'bottom', labels: { font: chartFont, usePointStyle: true, pointStyle: 'circle', padding: 12 } } }
+        }
+    });
+
+    // Initialize Lucide icons added in this template
+    if (window.lucide) lucide.createIcons();
+});
+
+// Quick Action handler with loading spinner
+async function runQuickAction(action, btn) {
+    if (btn.dataset.loading === 'true') return;
+    btn.dataset.loading = 'true';
+    var iconEl = btn.querySelector('.qa-icon');
+    var origIcon = iconEl ? iconEl.innerHTML : '';
+    if (iconEl) iconEl.innerHTML = '<div style="width:18px;height:18px;border:2px solid var(--text-muted);border-top-color:var(--accent);border-radius:50%;animation:spin 0.6s linear infinite;"></div>';
+    btn.style.opacity = '0.7';
+    btn.style.pointerEvents = 'none';
+
+    try {
+        const resp = await fetch('/api/actions/' + action, { method: 'POST' });
+        const data = await resp.json();
+        if (data.status === 'ok') {
+            window.toast && window.toast.success(data.message || (action + ' completed'));
+            // Brief success flash
+            if (iconEl) iconEl.innerHTML = '<i data-lucide="check" style="width:18px;height:18px;color:var(--success);"></i>';
+            if (window.lucide) lucide.createIcons();
+            setTimeout(function() { if (iconEl) iconEl.innerHTML = origIcon; if (window.lucide) lucide.createIcons(); }, 1500);
+        } else {
+            window.toast && window.toast.error(data.message || 'Action failed');
+            if (iconEl) iconEl.innerHTML = origIcon;
+            if (window.lucide) lucide.createIcons();
+        }
+    } catch (e) {
+        window.toast && window.toast.error('Network error: ' + e.message);
+        if (iconEl) iconEl.innerHTML = origIcon;
+        if (window.lucide) lucide.createIcons();
+    } finally {
+        btn.style.opacity = '';
+        btn.style.pointerEvents = '';
+        btn.dataset.loading = 'false';
+    }
+}
+
+// ── Add Job Modal ──
+function openAddJobModal() {
+    var modal = document.getElementById('add-job-modal');
+    if (!modal) {
+        var html = `
+        <div id="add-job-modal" class="fixed inset-0 z-50 flex items-center justify-center" style="background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);">
+            <div class="w-full max-w-lg mx-4 rounded-2xl p-6" style="background:var(--bg-surface);border:1px solid var(--border);max-height:90vh;overflow-y:auto;">
+                <div class="flex justify-between items-center mb-5">
+                    <h2 class="text-lg font-bold" style="color:var(--text-primary);">Add Job Manually</h2>
+                    <button onclick="closeModal('add-job-modal')" class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:var(--bg-secondary);color:var(--text-muted);">&times;</button>
+                </div>
+                <div class="space-y-3">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><label class="block text-xs font-medium mb-1" style="color:var(--text-muted);">Company *</label><input id="aj-company" class="input w-full" placeholder="e.g. Stripe"></div>
+                        <div><label class="block text-xs font-medium mb-1" style="color:var(--text-muted);">Role *</label><input id="aj-role" class="input w-full" placeholder="e.g. Account Executive"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><label class="block text-xs font-medium mb-1" style="color:var(--text-muted);">Location</label><input id="aj-location" class="input w-full" placeholder="Dublin, Remote EU"></div>
+                        <div><label class="block text-xs font-medium mb-1" style="color:var(--text-muted);">Industry</label><input id="aj-industry" class="input w-full" placeholder="SaaS, AI, Fintech"></div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div><label class="block text-xs font-medium mb-1" style="color:var(--text-muted);">Stage</label>
+                            <select id="aj-stage" class="input w-full"><option value="">-</option><option>Seed</option><option>Series A</option><option>Series B</option><option>Growth</option><option>Public</option></select>
+                        </div>
+                        <div><label class="block text-xs font-medium mb-1" style="color:var(--text-muted);">Tier</label>
+                            <select id="aj-tier" class="input w-full"><option value="1">1 (High)</option><option value="2" selected>2 (Med)</option><option value="3">3 (Low)</option></select>
+                        </div>
+                        <div><label class="block text-xs font-medium mb-1" style="color:var(--text-muted);">Fit Score</label>
+                            <input id="aj-fit" type="number" min="1" max="10" value="5" class="input w-full">
+                        </div>
+                    </div>
+                    <div><label class="block text-xs font-medium mb-1" style="color:var(--text-muted);">Application Link</label><input id="aj-link" class="input w-full" placeholder="https://..."></div>
+                    <div><label class="block text-xs font-medium mb-1" style="color:var(--text-muted);">Description / Notes</label><textarea id="aj-desc" class="input w-full" rows="3" placeholder="Paste JD or notes..."></textarea></div>
+                </div>
+                <div class="flex justify-end gap-2 mt-5">
+                    <button onclick="closeModal('add-job-modal')" class="btn btn-secondary">Cancel</button>
+                    <button onclick="submitAddJob()" class="btn btn-primary" id="aj-submit"><i data-lucide="plus" style="width:14px;height:14px;"></i> Add Job</button>
+                </div>
+            </div>
+        </div>`;
+        document.body.insertAdjacentHTML('beforeend', html);
+        if (window.lucide) lucide.createIcons();
+    } else {
+        modal.style.display = 'flex';
+    }
+}
+
+async function submitAddJob() {
+    var btn = document.getElementById('aj-submit');
+    var company = document.getElementById('aj-company').value.trim();
+    var role = document.getElementById('aj-role').value.trim();
+    if (!company || !role) { window.toast && window.toast.error('Company and Role are required'); return; }
+    btn.disabled = true; btn.textContent = 'Adding...';
+    try {
+        var resp = await fetch('/api/jobs/add', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({
+                company: company, role: role,
+                location: document.getElementById('aj-location').value,
+                industry: document.getElementById('aj-industry').value,
+                company_stage: document.getElementById('aj-stage').value,
+                tier: document.getElementById('aj-tier').value,
+                fit_score: document.getElementById('aj-fit').value,
+                application_link: document.getElementById('aj-link').value,
+                description: document.getElementById('aj-desc').value,
+            })
+        });
+        var data = await resp.json();
+        if (data.status === 'ok') {
+            window.toast && window.toast.success(data.message + (data.is_tier1 ? ' (Tier 1 - manual only)' : ''));
+            closeModal('add-job-modal');
+            setTimeout(function() { window.location.reload(); }, 800);
+        } else {
+            window.toast && window.toast.error(data.message || 'Failed to add job');
+        }
+    } catch(e) { window.toast && window.toast.error('Error: ' + e.message); }
+    finally { btn.disabled = false; btn.innerHTML = '<i data-lucide="plus" style="width:14px;height:14px;"></i> Add Job'; if(window.lucide) lucide.createIcons(); }
+}
+
+// ── Import CSV Modal ──
+function openImportCsvModal() {
+    var modal = document.getElementById('import-csv-modal');
+    if (!modal) {
+        var html = `
+        <div id="import-csv-modal" class="fixed inset-0 z-50 flex items-center justify-center" style="background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);">
+            <div class="w-full max-w-md mx-4 rounded-2xl p-6" style="background:var(--bg-surface);border:1px solid var(--border);">
+                <div class="flex justify-between items-center mb-5">
+                    <h2 class="text-lg font-bold" style="color:var(--text-primary);">Import Jobs from CSV</h2>
+                    <button onclick="closeModal('import-csv-modal')" class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:var(--bg-secondary);color:var(--text-muted);">&times;</button>
+                </div>
+                <div class="p-4 rounded-lg mb-4" style="background:var(--bg-secondary);">
+                    <p class="text-xs" style="color:var(--text-secondary);line-height:1.6;">
+                        Upload a CSV with columns: <strong>company</strong>, <strong>role</strong> (required), and optionally <strong>location</strong>, <strong>industry</strong>, <strong>link</strong>.<br>
+                        Works with LinkedIn job search exports.
+                    </p>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-xs font-medium mb-1" style="color:var(--text-muted);">Source</label>
+                    <select id="csv-source" class="input w-full">
+                        <option value="linkedin">LinkedIn Export</option>
+                        <option value="irishjobs">IrishJobs Export</option>
+                        <option value="csv">Generic CSV</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed cursor-pointer transition-all" id="csv-drop-zone"
+                           style="border-color:var(--border);background:var(--bg-secondary);"
+                           onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+                        <i data-lucide="upload-cloud" style="width:32px;height:32px;color:var(--text-muted);margin-bottom:8px;"></i>
+                        <span class="text-sm font-medium" style="color:var(--text-secondary);" id="csv-filename">Click to select CSV file</span>
+                        <span class="text-xs mt-1" style="color:var(--text-muted);">or drag and drop</span>
+                        <input type="file" accept=".csv" class="hidden" id="csv-file-input" onchange="csvFileSelected(this)">
+                    </label>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button onclick="closeModal('import-csv-modal')" class="btn btn-secondary">Cancel</button>
+                    <button onclick="submitImportCsv()" class="btn btn-primary" id="csv-submit" disabled><i data-lucide="upload" style="width:14px;height:14px;"></i> Import</button>
+                </div>
+            </div>
+        </div>`;
+        document.body.insertAdjacentHTML('beforeend', html);
+        if (window.lucide) lucide.createIcons();
+        // Make the drop zone clickable
+        document.getElementById('csv-drop-zone').addEventListener('click', function() { document.getElementById('csv-file-input').click(); });
+    } else {
+        modal.style.display = 'flex';
+    }
+}
+
+function csvFileSelected(input) {
+    if (input.files.length) {
+        document.getElementById('csv-filename').textContent = input.files[0].name;
+        document.getElementById('csv-submit').disabled = false;
+    }
+}
+
+async function submitImportCsv() {
+    var btn = document.getElementById('csv-submit');
+    var fileInput = document.getElementById('csv-file-input');
+    if (!fileInput.files.length) { window.toast && window.toast.error('Select a file first'); return; }
+    btn.disabled = true; btn.textContent = 'Importing...';
+    var formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    formData.append('source', document.getElementById('csv-source').value);
+    try {
+        var resp = await fetch('/api/jobs/import-csv', { method: 'POST', body: formData });
+        var data = await resp.json();
+        if (data.status === 'ok') {
+            window.toast && window.toast.success(data.message);
+            closeModal('import-csv-modal');
+            setTimeout(function() { window.location.reload(); }, 800);
+        } else {
+            window.toast && window.toast.error(data.message || 'Import failed');
+        }
+    } catch(e) { window.toast && window.toast.error('Error: ' + e.message); }
+    finally { btn.disabled = false; btn.innerHTML = '<i data-lucide="upload" style="width:14px;height:14px;"></i> Import'; if(window.lucide) lucide.createIcons(); }
+}
+
+function closeModal(id) {
+    var m = document.getElementById(id);
+    if (m) m.style.display = 'none';
+}
+
+// ── Streak Tracker ──
+(function initStreak() {
+    var streakData = JSON.parse(localStorage.getItem('oa_streak') || '{"days":[],"count":0}');
+    var today = new Date().toISOString().slice(0, 10);
+    var sentToday = {{ stats.sent_today or 0 }};
+
+    // Mark today as active if messages sent
+    if (sentToday > 0 && streakData.days.indexOf(today) === -1) {
+        streakData.days.push(today);
+    }
+
+    // Keep only last 30 days
+    var cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
+    streakData.days = streakData.days.filter(function(d) { return new Date(d) >= cutoff; });
+
+    // Calculate consecutive streak from today backwards
+    var streak = 0;
+    var checkDate = new Date();
+    if (sentToday === 0) checkDate.setDate(checkDate.getDate() - 1); // if nothing sent today, start from yesterday
+    for (var i = 0; i < 60; i++) {
+        var dateStr = checkDate.toISOString().slice(0, 10);
+        if (streakData.days.indexOf(dateStr) !== -1) {
+            streak++;
+            checkDate.setDate(checkDate.getDate() - 1);
+        } else {
+            break;
+        }
+    }
+    if (sentToday > 0) streak = Math.max(streak, 1);
+    streakData.count = streak;
+    localStorage.setItem('oa_streak', JSON.stringify(streakData));
+
+    // Update UI
+    var countEl = document.getElementById('streak-count');
+    if (countEl) countEl.textContent = streak;
+
+    // Update week heatmap
+    var now = new Date();
+    var dayOfWeek = now.getDay(); // 0=Sun
+    var mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    for (var d = 0; d < 7; d++) {
+        var dayDate = new Date(now);
+        dayDate.setDate(now.getDate() + mondayOffset + d);
+        var dayStr = dayDate.toISOString().slice(0, 10);
+        var el = document.querySelector('.streak-day[data-day="' + d + '"]');
+        if (el) {
+            if (streakData.days.indexOf(dayStr) !== -1) {
+                el.style.background = 'var(--success)';
+                el.style.color = 'white';
+                el.style.boxShadow = '0 2px 6px rgba(16,185,129,0.3)';
+            } else if (dayStr === today) {
+                el.style.background = 'var(--warning-soft)';
+                el.style.color = 'var(--warning)';
+                el.style.border = '1px dashed var(--warning)';
+            }
+        }
+    }
+
+    // Update streak message
+    var msgEl = document.getElementById('streak-message');
+    if (msgEl) {
+        var span = msgEl.querySelector('span');
+        if (streak >= 7) {
+            msgEl.style.background = 'var(--success-soft)';
+            msgEl.style.color = 'var(--success)';
+            if (span) span.textContent = 'Amazing! ' + streak + '-day streak! Keep the momentum!';
+        } else if (streak >= 3) {
+            msgEl.style.background = 'var(--accent-soft)';
+            msgEl.style.color = 'var(--accent)';
+            if (span) span.textContent = 'Great run! ' + streak + ' days strong. Keep going!';
+        } else if (sentToday > 0) {
+            msgEl.style.background = 'var(--success-soft)';
+            msgEl.style.color = 'var(--success)';
+            if (span) span.textContent = 'Today counts! Streak at ' + streak + ' day' + (streak > 1 ? 's' : '') + '.';
+        }
+    }
+})();
+
+// ── Milestones & Achievements ──
+(function initMilestones() {
+    var stats = {
+        jobs: {{ stats.total_jobs or 0 }},
+        contacts: {{ stats.total_contacts or 0 }},
+        sent: {{ stats.sent or 0 }},
+        replies: {{ stats.replies or 0 }},
+        referrals: {{ stats.referrals or 0 }},
+        applied: {{ stats.pipeline.applied or 0 }},
+        streak: parseInt(document.getElementById('streak-count').textContent) || 0,
+    };
+
+    var milestones = [
+        { id: 'first_job', icon: 'briefcase', label: 'First Lead', desc: 'Source your first job', check: stats.jobs >= 1 },
+        { id: 'ten_jobs', icon: 'layers', label: '10 Jobs', desc: 'Source 10 jobs', check: stats.jobs >= 10 },
+        { id: 'fifty_jobs', icon: 'database', label: 'Pipeline Pro', desc: 'Source 50 jobs', check: stats.jobs >= 50 },
+        { id: 'first_send', icon: 'send', label: 'First Outreach', desc: 'Send your first message', check: stats.sent >= 1 },
+        { id: 'twenty_sent', icon: 'mail', label: 'Networker', desc: 'Send 20 messages', check: stats.sent >= 20 },
+        { id: 'first_reply', icon: 'message-circle', label: 'Got a Reply!', desc: 'Receive your first reply', check: stats.replies >= 1 },
+        { id: 'five_replies', icon: 'messages-square', label: 'Conversation Starter', desc: '5 replies received', check: stats.replies >= 5 },
+        { id: 'first_referral', icon: 'user-plus', label: 'Referred!', desc: 'Get your first referral', check: stats.referrals >= 1 },
+        { id: 'first_apply', icon: 'rocket', label: 'Applied!', desc: 'Submit first application', check: stats.applied >= 1 },
+        { id: 'streak_3', icon: 'flame', label: 'On Fire', desc: '3-day streak', check: stats.streak >= 3 },
+        { id: 'streak_7', icon: 'zap', label: 'Unstoppable', desc: '7-day streak', check: stats.streak >= 7 },
+        { id: 'streak_14', icon: 'trophy', label: 'Machine Mode', desc: '14-day streak', check: stats.streak >= 14 },
+    ];
+
+    var earned = JSON.parse(localStorage.getItem('oa_milestones') || '[]');
+    var newlyEarned = [];
+    milestones.forEach(function(m) {
+        if (m.check && earned.indexOf(m.id) === -1) {
+            earned.push(m.id);
+            newlyEarned.push(m);
+        }
+    });
+    if (newlyEarned.length > 0) {
+        localStorage.setItem('oa_milestones', JSON.stringify(earned));
+        // Toast for each new achievement
+        newlyEarned.forEach(function(m, idx) {
+            setTimeout(function() {
+                if (window.toast) window.toast.success('Achievement unlocked: ' + m.label + '!', 5000);
+            }, idx * 1200);
+        });
+    }
+
+    // Render badges in the container
+    var container = document.getElementById('milestone-badges');
+    if (!container) return;
+
+    var earnedCount = 0;
+    container.innerHTML = milestones.map(function(m) {
+        var isEarned = earned.indexOf(m.id) !== -1;
+        if (isEarned) earnedCount++;
+        var isNew = newlyEarned.some(function(n) { return n.id === m.id; });
+        return '<div class="milestone-badge' + (isEarned ? ' earned' : '') + (isNew ? ' newly-earned' : '') + '" title="' + m.desc + '">' +
+            '<div class="milestone-icon"><i data-lucide="' + m.icon + '"></i></div>' +
+            '<div class="milestone-label">' + m.label + '</div>' +
+            '</div>';
+    }).join('');
+
+    // Update counter
+    var counterEl = document.getElementById('milestone-counter');
+    if (counterEl) counterEl.textContent = earnedCount + '/' + milestones.length;
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+})();
+
+// Health refresh
+async function refreshHealth() {
+    try {
+        const resp = await fetch('/api/health');
+        const data = await resp.json();
+        if (data.services) {
+            const container = document.getElementById('api-health');
+            container.innerHTML = data.services.map(api =>
+                `<div class="flex items-center gap-2.5 p-3 rounded-lg" style="background: var(--bg-secondary);">
+                    <span class="health-dot ${api.status}"></span>
+                    <div>
+                        <div class="text-xs font-semibold" style="color: var(--text-primary);">${api.name}</div>
+                        <div class="text-xs" style="color: var(--text-muted);">${api.detail}</div>
+                    </div>
+                </div>`
+            ).join('');
+            window.toast && window.toast.success('Health status refreshed');
+        }
+    } catch (e) {
+        window.toast && window.toast.error('Failed to refresh health');
+    }
+}
+</script>
+{% endblock %}

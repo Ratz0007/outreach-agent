@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+{% set active = "contacts" %}
+{% block title %}Contacts — Outreach Agent{% endblock %}
+
+{% block content %}
+<style>
+/* ── Contacts page styles ─────────────────────────────────────── */
+.view-toggle {
+    display: inline-flex;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--bg-secondary);
+}
+.view-toggle button {
+    padding: 6px 14px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.view-toggle button.active {
+    background: var(--bg-surface);
+    color: var(--accent);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Contact card grid */
+.contact-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+}
+.contact-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    padding: 20px;
+    transition: all 0.2s;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+.contact-card:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+}
+.contact-card .cc-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.contact-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: white;
+    flex-shrink: 0;
+}
+.contact-card .cc-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+.contact-card .cc-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-subtle);
+}
+</style>
+
+<div class="flex justify-between items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold" style="color: var(--text-primary);">People Mapper</h1>
+        <p class="text-sm mt-1" style="color: var(--text-muted);">{{ contacts|length }} contacts across {{ by_company|length }} companies</p>
+    </div>
+    <div class="view-toggle">
+        <button id="btn-table-view" class="active" onclick="setContactView('table')">
+            <i data-lucide="table-2" style="width:14px;height:14px;"></i> Table
+        </button>
+        <button id="btn-card-view" onclick="setContactView('cards')">
+            <i data-lucide="layout-grid" style="width:14px;height:14px;"></i> Cards
+        </button>
+    </div>
+</div>
+
+<!-- Search & Filters -->
+<div class="card p-4 mb-5">
+    <div class="flex gap-3 flex-wrap items-center">
+        <div class="flex-1" style="min-width:200px;position:relative;">
+            <i data-lucide="search" style="width:14px;height:14px;position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none;"></i>
+            <input type="text" id="contact-search" class="input w-full" placeholder="Search name, company, title, email..." oninput="filterContacts()" style="padding-left:34px;">
+        </div>
+        <select id="filter-priority" class="input" onchange="filterContacts()">
+            <option value="">All Priorities</option>
+            <option value="1">P1 — Hiring Manager</option>
+            <option value="2">P2 — Team Lead</option>
+            <option value="3">P3 — Recruiter</option>
+        </select>
+        <select id="filter-relationship" class="input" onchange="filterContacts()">
+            <option value="">All Relationships</option>
+            <option value="hiring_manager">Hiring Manager</option>
+            <option value="team_lead">Team Lead</option>
+            <option value="recruiter">Recruiter</option>
+            <option value="peer">Peer</option>
+        </select>
+        <select id="filter-status" class="input" onchange="filterContacts()">
+            <option value="">All Statuses</option>
+            <option value="to_contact">To Contact</option>
+            <option value="contacted">Contacted</option>
+            <option value="follow_up">Follow Up</option>
+            <option value="replied">Replied</option>
+            <option value="archived">Archived</option>
+        </select>
+        <select id="sort-contacts" class="input" onchange="sortContacts()">
+            <option value="company">Sort: Company A to Z</option>
+            <option value="name">Sort: Name A to Z</option>
+            <option value="priority-asc">Sort: Priority (P1 first)</option>
+        </select>
+    </div>
+</div>
+
+<!-- TABLE VIEW -->
+<div id="contacts-table-view">
+    <div class="card overflow-hidden">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Title</th>
+                    <th>Company & Job</th>
+                    <th>Email</th>
+                    <th>Priority</th>
+                    <th>Relationship</th>
+                    <th>Status</th>
+                    <th>Source</th>
+                    <th>Variant</th>
+                </tr>
+            </thead>
+            <tbody id="contacts-body">
+                {% for c in all_contacts %}
+                <tr class="contact-row"
+                    data-name="{{ c.name|lower }}"
+                    data-title="{{ (c.title or '')|lower }}"
+                    data-company="{{ (c.company or '')|lower }}"
+                    data-email="{{ (c.email or '')|lower }}"
+                    data-priority="{{ c.priority or 0 }}"
+                    data-relationship="{{ c.relationship_type or '' }}"
+                    data-status="{{ c.next_action or '' }}"
+                    data-source="{{ c.source or '' }}">
+                    <td>
+                        <div class="flex items-center gap-2">
+                            {% set name_parts = c.name.split() %}
+                            {% set initials = (name_parts[0][0] if name_parts else '?') + (name_parts[-1][0] if name_parts|length > 1 else '') %}
+                            <div class="contact-avatar" style="background: {{ ['#6366f1','#0ea5e9','#8b5cf6','#ec4899','#f97316','#14b8a6','#f43f5e','#84cc16'][c.id % 8] }};">
+                                {{ initials|upper }}
+                            </div>
+                            <a href="/contacts/{{ c.id }}" class="font-medium hover:underline" style="color: var(--text-primary);">{{ c.name }}</a>
+                        </div>
+                    </td>
+                    <td class="text-sm" style="color: var(--text-muted);">{{ c.title or '-' }}</td>
+                    <td>
+                        <div class="font-medium text-sm" style="color: var(--text-secondary);">{{ c.company or '-' }}</div>
+                        {% if c.job_role %}
+                        <div class="flex gap-1.5 mt-1">
+                            <span class="text-xs" style="color: var(--text-muted);">{{ c.job_role }}</span>
+                            {% if c.job_link %}
+                            <a href="{{ c.job_link }}" target="_blank" class="text-xs" style="color: var(--accent);">Apply</a>
+                            {% endif %}
+                            <a href="https://www.linkedin.com/jobs/search/?keywords={{ c.job_role|urlencode }}%20{{ (c.company or '')|urlencode }}" target="_blank" class="text-xs" style="color: #0a66c2;">LinkedIn</a>
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if c.email %}
+                        <a href="mailto:{{ c.email }}" class="text-xs" style="color: var(--accent);">{{ c.email }}</a>
+                        {% else %}<span class="text-xs" style="color: var(--text-muted);">—</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if c.priority == 1 %}<span class="inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold" style="background: var(--success-soft); color: var(--success); border: 1px solid color-mix(in srgb, var(--success) 25%, transparent);">P1</span>
+                        {% elif c.priority == 2 %}<span class="inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold" style="background: var(--warning-soft); color: var(--warning); border: 1px solid color-mix(in srgb, var(--warning) 25%, transparent);">P2</span>
+                        {% elif c.priority == 3 %}<span class="inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold" style="background: var(--bg-secondary); color: var(--text-muted); border: 1px solid var(--border);">P3</span>
+                        {% else %}<span style="color: var(--text-muted);">-</span>{% endif %}
+                    </td>
+                    <td class="text-sm" style="color: var(--text-muted);">{{ c.relationship_type or '-' }}</td>
+                    <td><span class="badge badge-{{ c.next_action or 'pending' }}">{{ c.next_action or 'pending' }}</span></td>
+                    <td class="text-xs" style="color: var(--text-muted);">{{ c.source or '-' }}</td>
+                    <td><span class="text-xs font-medium" style="color: #7c3aed;">{{ c.assigned_variant or '-' }}</span></td>
+                </tr>
+                {% endfor %}
+                {% if not all_contacts %}
+                <tr><td colspan="9" class="text-center py-10" style="color: var(--text-muted);">No contacts yet. Run enrichment first.</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- CARD VIEW (hidden by default) -->
+<div id="contacts-card-view" style="display:none;">
+    <div class="contact-cards" id="contacts-cards-grid">
+        {% for c in all_contacts %}
+        {% set name_parts = c.name.split() %}
+        {% set initials = (name_parts[0][0] if name_parts else '?') + (name_parts[-1][0] if name_parts|length > 1 else '') %}
+        <a href="/contacts/{{ c.id }}" class="contact-card card-item"
+           data-name="{{ c.name|lower }}"
+           data-title="{{ (c.title or '')|lower }}"
+           data-company="{{ (c.company or '')|lower }}"
+           data-email="{{ (c.email or '')|lower }}"
+           data-priority="{{ c.priority or 0 }}"
+           data-relationship="{{ c.relationship_type or '' }}"
+           data-status="{{ c.next_action or '' }}">
+            <div class="cc-header">
+                <div class="contact-avatar" style="background: {{ ['#6366f1','#0ea5e9','#8b5cf6','#ec4899','#f97316','#14b8a6','#f43f5e','#84cc16'][c.id % 8] }};">
+                    {{ initials|upper }}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="font-semibold truncate" style="color: var(--text-primary);">{{ c.name }}</div>
+                    <div class="text-xs truncate" style="color: var(--text-muted);">{{ c.title or 'Unknown Title' }}</div>
+                </div>
+                {% if c.priority == 1 %}<span class="inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold" style="background: var(--success-soft); color: var(--success);">P1</span>
+                {% elif c.priority == 2 %}<span class="inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold" style="background: var(--warning-soft); color: var(--warning);">P2</span>
+                {% elif c.priority == 3 %}<span class="inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold" style="background: var(--bg-secondary); color: var(--text-muted);">P3</span>
+                {% endif %}
+            </div>
+            <div class="cc-meta">
+                <span class="text-xs font-medium" style="color: var(--text-secondary);">{{ c.company or '-' }}</span>
+                {% if c.job_role %}
+                <span class="text-xs" style="color: var(--text-muted);">&middot; {{ c.job_role }}</span>
+                {% endif %}
+            </div>
+            <div class="flex flex-wrap gap-2 mb-3">
+                {% if c.email %}
+                <span class="text-xs truncate" style="color: var(--accent); max-width: 200px;">{{ c.email }}</span>
+                {% endif %}
+                {% if c.linkedin_url %}
+                <span class="text-xs" style="color: #0a66c2;">LinkedIn</span>
+                {% endif %}
+            </div>
+            <div class="cc-footer">
+                <span class="badge badge-{{ c.next_action or 'pending' }}">{{ c.next_action or 'pending' }}</span>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs" style="color: var(--text-muted);">{{ c.relationship_type or '' }}</span>
+                    <span class="text-xs font-medium" style="color: #7c3aed;">{{ c.assigned_variant or '' }}</span>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+        {% if not all_contacts %}
+        <div class="col-span-full text-center py-10" style="color: var(--text-muted);">No contacts yet. Run enrichment first.</div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="text-sm mt-3" style="color: var(--text-muted);" id="contacts-count">{{ contacts|length }} contacts</div>
+
+<script>
+// ── View Toggle ──────────────────────────────────────────────────
+function setContactView(view) {
+    const tableView = document.getElementById('contacts-table-view');
+    const cardView = document.getElementById('contacts-card-view');
+    const btnTable = document.getElementById('btn-table-view');
+    const btnCard = document.getElementById('btn-card-view');
+
+    if (view === 'cards') {
+        tableView.style.display = 'none';
+        cardView.style.display = '';
+        btnTable.classList.remove('active');
+        btnCard.classList.add('active');
+    } else {
+        tableView.style.display = '';
+        cardView.style.display = 'none';
+        btnTable.classList.add('active');
+        btnCard.classList.remove('active');
+    }
+    localStorage.setItem('contacts-view', view);
+}
+(function() {
+    const saved = localStorage.getItem('contacts-view');
+    if (saved === 'cards') setContactView('cards');
+})();
+
+// ── Filter & Sort ────────────────────────────────────────────────
+function filterContacts() {
+    const q = document.getElementById('contact-search').value.toLowerCase();
+    const priority = document.getElementById('filter-priority').value;
+    const relationship = document.getElementById('filter-relationship').value;
+    const status = document.getElementById('filter-status').value;
+    let visible = 0;
+
+    // Filter table rows
+    document.querySelectorAll('.contact-row').forEach(row => {
+        const d = row.dataset;
+        const matchSearch = !q || d.name.includes(q) || d.company.includes(q) || d.title.includes(q) || d.email.includes(q);
+        const matchPriority = !priority || d.priority === priority;
+        const matchRel = !relationship || d.relationship === relationship;
+        const matchStatus = !status || d.status === status;
+        const show = matchSearch && matchPriority && matchRel && matchStatus;
+        row.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+
+    // Filter card items
+    document.querySelectorAll('.card-item').forEach(card => {
+        const d = card.dataset;
+        const matchSearch = !q || d.name.includes(q) || d.company.includes(q) || d.title.includes(q) || d.email.includes(q);
+        const matchPriority = !priority || d.priority === priority;
+        const matchRel = !relationship || d.relationship === relationship;
+        const matchStatus = !status || d.status === status;
+        const show = matchSearch && matchPriority && matchRel && matchStatus;
+        card.style.display = show ? '' : 'none';
+    });
+
+    document.getElementById('contacts-count').textContent = visible + ' contacts';
+}
+
+function sortContacts() {
+    const val = document.getElementById('sort-contacts').value;
+    const tbody = document.getElementById('contacts-body');
+    const rows = Array.from(tbody.querySelectorAll('.contact-row'));
+    rows.sort((a, b) => {
+        if (val === 'company') return a.dataset.company.localeCompare(b.dataset.company);
+        if (val === 'name') return a.dataset.name.localeCompare(b.dataset.name);
+        if (val === 'priority-asc') return (parseInt(a.dataset.priority)||99) - (parseInt(b.dataset.priority)||99);
+        return 0;
+    });
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+// Initialize Lucide
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.lucide) lucide.createIcons();
+});
+</script>
+{% endblock %}

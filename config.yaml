@@ -1,0 +1,61 @@
+agent:
+  name: "Ratin Sharma"
+  email: "ratinsharma99@gmail.com"
+  daily_message_limit: 20
+  daily_linkedin_invite_limit: 15
+  weekly_linkedin_invite_limit: 100
+  follow_up_days: 4
+  max_follow_ups: 1
+  max_contacts_per_company: 3
+  max_contacts_per_company_per_day: 1
+  linkedin_invite_gap_minutes: 5
+
+search:
+  roles:
+    - "Account Executive"
+    - "Sales Manager"
+    - "Business Development Manager"
+    - "Founding AE"
+    - "Senior Account Executive"
+  locations:
+    - "Ireland"
+    - "Remote - Europe"
+    - "Dublin"
+    - "London"
+  industries:
+    - "AI"
+    - "SaaS"
+    - "Fintech"
+    - "Cybersecurity"
+  exclude_keywords:
+    - "intern"
+    - "junior"
+    - "entry level"
+    - "graduate"
+
+ab_testing:
+  min_sends_per_variant: 10
+  min_total_replies_to_evaluate: 30
+  kill_threshold_pct: 30
+  winner_boost_threshold_pct: 30
+  min_active_variants: 4
+
+variants:
+  V1:  { style: "referral",       weight: 0.12, active: true }
+  V2:  { style: "referral",       weight: 0.10, active: true }
+  V3:  { style: "referral",       weight: 0.10, active: true }
+  V4:  { style: "value_first",    weight: 0.10, active: true }
+  V5:  { style: "value_first",    weight: 0.10, active: true }
+  V6:  { style: "value_first",    weight: 0.08, active: true }
+  V7:  { style: "conversational", weight: 0.10, active: true }
+  V8:  { style: "conversational", weight: 0.10, active: true }
+  V9:  { style: "conversational", weight: 0.10, active: true }
+  V10: { style: "conversational", weight: 0.10, active: true }
+
+schedule:
+  source_jobs: "08:00"
+  enrich_contacts: "08:30"
+  generate_messages: "09:00"
+  send_outreach: "10:00"
+  check_replies: "17:00"
+  daily_digest: "20:00"

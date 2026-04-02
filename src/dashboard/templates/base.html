@@ -1,0 +1,2285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Prevent flash: apply theme before render -->
+    <script>
+        (function(){
+            var t = localStorage.getItem('theme');
+            if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+        })();
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Outreach Agent{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        surface: { 50: '#f8f9fc', 100: '#eef1f6', 200: '#dde3ed', 300: '#c4cdd9', 400: '#9ba5b5', 500: '#6b7280' },
+                        navy: { 800: '#1e2235', 900: '#171a2b' },
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* ── CSS VARIABLES ─────────────────────────────────────────── */
+        :root {
+            --bg-primary: #FAFAF9;
+            --bg-secondary: #F4F4F5;
+            --bg-surface: #FFFFFF;
+            --bg-elevated: #FFFFFF;
+            --text-primary: #18181B;
+            --text-secondary: #52525B;
+            --text-muted: #A1A1AA;
+            --border: #E4E4E7;
+            --border-subtle: #F4F4F5;
+            --accent: #6366F1;
+            --accent-hover: #4F46E5;
+            --accent-soft: rgba(99, 102, 241, 0.1);
+            --accent-gradient: linear-gradient(135deg, #6366f1, #7c3aed);
+            --success: #10B981;
+            --success-soft: rgba(16, 185, 129, 0.1);
+            --warning: #F59E0B;
+            --warning-soft: rgba(245, 158, 11, 0.1);
+            --danger: #EF4444;
+            --danger-soft: rgba(239, 68, 68, 0.1);
+            --info: #3B82F6;
+            --info-soft: rgba(59, 130, 246, 0.1);
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.07);
+            --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+            --radius-sm: 4px;
+            --radius-md: 6px;
+            --radius-lg: 8px;
+            --radius-xl: 12px;
+            --transition: 150ms ease-out;
+            /* Sidebar */
+            --sidebar-bg: #18181B;
+            --sidebar-text: #A1A1AA;
+            --sidebar-text-active: #FFFFFF;
+            --sidebar-hover: rgba(255,255,255,0.06);
+            --sidebar-border: rgba(255,255,255,0.08);
+            /* Table */
+            --table-header-bg: var(--bg-secondary);
+            --table-header-text: var(--text-muted);
+            --table-row-border: var(--border-subtle);
+            --table-hover: var(--bg-secondary);
+            /* Chat */
+            --chat-bg: var(--bg-surface);
+            --chat-messages-bg: var(--bg-secondary);
+            --chat-bot-bg: var(--bg-surface);
+            --chat-bot-text: var(--text-secondary);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #09090B;
+            --bg-secondary: #18181B;
+            --bg-surface: #1C1C22;
+            --bg-elevated: #27272A;
+            --text-primary: #FAFAFA;
+            --text-secondary: #A1A1AA;
+            --text-muted: #71717A;
+            --border: #27272A;
+            --border-subtle: #1C1C22;
+            --accent: #818CF8;
+            --accent-hover: #6366F1;
+            --accent-soft: rgba(129, 140, 248, 0.15);
+            --accent-gradient: linear-gradient(135deg, #818CF8, #A78BFA);
+            --success: #34D399;
+            --success-soft: rgba(16, 185, 129, 0.15);
+            --warning: #FBBF24;
+            --warning-soft: rgba(245, 158, 11, 0.15);
+            --danger: #F87171;
+            --danger-soft: rgba(239, 68, 68, 0.15);
+            --info: #60A5FA;
+            --info-soft: rgba(59, 130, 246, 0.15);
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.3);
+            --shadow-lg: 0 10px 15px rgba(0,0,0,0.4);
+            /* Sidebar */
+            --sidebar-bg: #0F0F12;
+            --sidebar-text: #71717A;
+            --sidebar-text-active: #FAFAFA;
+            --sidebar-hover: rgba(255,255,255,0.04);
+            --sidebar-border: rgba(255,255,255,0.06);
+            /* Table */
+            --table-header-bg: var(--bg-secondary);
+            --table-header-text: var(--text-muted);
+            --table-row-border: var(--border-subtle);
+            --table-hover: rgba(255,255,255,0.03);
+            /* Chat */
+            --chat-bg: var(--bg-elevated);
+            --chat-messages-bg: var(--bg-secondary);
+            --chat-bot-bg: var(--bg-elevated);
+            --chat-bot-text: var(--text-secondary);
+        }
+
+        /* ── GLOBAL ────────────────────────────────────────────────── */
+        * { font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif; }
+        body { background: var(--bg-primary); color: var(--text-primary); transition: background var(--transition), color var(--transition); }
+
+        /* Mono font for numbers/stats/data */
+        .font-data, .kpi-value, .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+        /* ── CARDS ─────────────────────────────────────────────────── */
+        .card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            transition: all 0.2s;
+            box-shadow: var(--shadow-sm);
+        }
+        .card:hover {
+            border-color: var(--border);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* ── BADGES ────────────────────────────────────────────────── */
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; }
+        .badge-draft { background: var(--bg-secondary); color: var(--text-muted); border: 1px solid var(--border); }
+        .badge-approved { background: var(--info-soft); color: var(--info); border: 1px solid transparent; }
+        .badge-sent { background: var(--success-soft); color: var(--success); border: 1px solid transparent; }
+        .badge-replied { background: var(--accent-soft); color: var(--accent); border: 1px solid transparent; }
+        .badge-no_reply { background: var(--warning-soft); color: var(--warning); border: 1px solid transparent; }
+        .badge-shortlisted { background: var(--info-soft); color: var(--info); border: 1px solid transparent; }
+        .badge-contacted { background: var(--success-soft); color: var(--success); border: 1px solid transparent; }
+        .badge-applied { background: var(--accent-soft); color: var(--accent); border: 1px solid transparent; }
+        .badge-interviewing { background: var(--warning-soft); color: var(--warning); border: 1px solid transparent; }
+        .badge-rejected { background: var(--danger-soft); color: var(--danger); border: 1px solid transparent; }
+        .badge-offer { background: var(--success-soft); color: var(--success); border: 1px solid transparent; }
+        .badge-follow_up { background: var(--warning-soft); color: var(--warning); border: 1px solid transparent; }
+        .badge-to_contact { background: var(--info-soft); color: var(--info); border: 1px solid transparent; }
+        .badge-pending { background: var(--bg-secondary); color: var(--text-muted); border: 1px solid var(--border); }
+
+        /* ── SIDEBAR ───────────────────────────────────────────────── */
+        .sidebar { background: var(--sidebar-bg); width: 240px; min-height: 100vh; transition: width 0.25s cubic-bezier(.4,0,.2,1); overflow: hidden; }
+        .sidebar.collapsed { width: 64px; }
+        .sidebar .nav-label { opacity: 1; transition: opacity 0.2s ease; white-space: nowrap; }
+        .sidebar.collapsed .nav-label { opacity: 0; pointer-events: none; width: 0; }
+        .sidebar.collapsed .sidebar-brand-text { opacity: 0; width: 0; overflow: hidden; }
+        .sidebar .sidebar-brand-text { transition: opacity 0.2s ease; }
+        .sidebar a.nav-link { transition: all var(--transition); color: var(--sidebar-text); position: relative; border-left: 3px solid transparent; }
+        .sidebar a.nav-link:hover { background: var(--sidebar-hover); color: var(--sidebar-text-active); }
+        .sidebar a.nav-link.active { background: var(--accent-soft); color: var(--accent); border-left-color: var(--accent); }
+        .sidebar a.nav-link.active i { color: var(--accent); }
+        .sidebar a.nav-link i { width: 18px; height: 18px; stroke-width: 1.75; color: var(--sidebar-text); opacity: 0.7; flex-shrink: 0; }
+        .sidebar a.nav-link:hover i { opacity: 1; }
+        .sidebar a.nav-link.active i { opacity: 1; }
+        /* Tooltip on collapsed sidebar */
+        .sidebar.collapsed a.nav-link { justify-content: center; padding-left: 0; padding-right: 0; }
+        .sidebar.collapsed a.nav-link .nav-tooltip { display: block; }
+        .nav-tooltip {
+            display: none; position: absolute; left: 68px; top: 50%; transform: translateY(-50%);
+            background: var(--bg-elevated); color: var(--text-primary); padding: 4px 10px;
+            border-radius: var(--radius-md); font-size: 12px; white-space: nowrap;
+            box-shadow: var(--shadow-md); border: 1px solid var(--border); z-index: 100; pointer-events: none;
+        }
+        .sidebar:not(.collapsed) a.nav-link:hover .nav-tooltip { display: none !important; }
+        /* Draft count badge */
+        .nav-badge { background: var(--danger); color: white; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; line-height: 1.4; }
+        .sidebar.collapsed .nav-badge { position: absolute; top: 4px; right: 6px; padding: 0 4px; font-size: 9px; }
+
+        /* ── TABLES ────────────────────────────────────────────────── */
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            text-align: left; padding: 12px 14px; color: var(--table-header-text); font-size: 11px;
+            font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border); background: var(--table-header-bg);
+        }
+        td {
+            padding: 12px 14px; border-bottom: 1px solid var(--table-row-border);
+            font-size: 13px; color: var(--text-secondary);
+        }
+        tr:hover { background: var(--table-hover); }
+
+        /* ── BUTTONS ───────────────────────────────────────────────── */
+        .btn {
+            padding: 7px 18px; border-radius: var(--radius-lg); font-size: 13px; font-weight: 500; cursor: pointer;
+            transition: all 0.2s; border: none; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-primary { background: var(--accent-gradient); color: white; box-shadow: 0 2px 8px rgba(99,102,241,0.25); }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(99,102,241,0.35); }
+        .btn-secondary { background: var(--bg-surface); color: var(--text-secondary); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--bg-secondary); border-color: var(--text-muted); }
+        .btn-success { background: linear-gradient(135deg, #059669, var(--success)); color: white; box-shadow: 0 2px 8px rgba(5,150,105,0.2); }
+        .btn-success:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(5,150,105,0.3); }
+        .btn-danger { background: linear-gradient(135deg, #dc2626, var(--danger)); color: white; }
+
+        /* ── KPI ───────────────────────────────────────────────────── */
+        .kpi-value { font-size: 28px; font-weight: 700; color: var(--text-primary); font-family: 'JetBrains Mono', monospace; }
+        .kpi-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; margin-top: 4px; }
+
+        /* ── INPUTS ────────────────────────────────────────────────── */
+        .input {
+            background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+            padding: 8px 14px; color: var(--text-primary); font-size: 13px; outline: none;
+            transition: all 0.2s; font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+        .input::placeholder { color: var(--text-muted); }
+
+        select.input {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236b7280' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 10px center; padding-right: 30px;
+        }
+
+        /* ── LINKEDIN ICON ─────────────────────────────────────────── */
+        .li-icon { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px;
+                   background: #0a66c2; border-radius: var(--radius-sm); flex-shrink: 0; }
+        .li-icon svg { width: 12px; height: 12px; fill: white; }
+
+        /* ── SCROLLBAR ─────────────────────────────────────────────── */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+        /* ── SKELETON LOADING ──────────────────────────────────────── */
+        .skeleton { background: var(--bg-secondary); border-radius: var(--radius-md); position: relative; overflow: hidden; }
+        .skeleton::after {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+            animation: skeleton-shimmer 1.5s infinite;
+        }
+        [data-theme="dark"] .skeleton::after {
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
+        }
+        @keyframes skeleton-shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+        .skeleton-text { height: 12px; margin-bottom: 8px; }
+        .skeleton-text-sm { height: 10px; width: 60%; margin-bottom: 6px; }
+        .skeleton-heading { height: 20px; width: 40%; margin-bottom: 12px; }
+        .skeleton-card { height: 100px; }
+        .skeleton-chart { height: 200px; }
+        .skeleton-avatar { width: 40px; height: 40px; border-radius: 50%; }
+        .skeleton-row { display: flex; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-subtle); }
+        /* Skeleton table helper */
+        .skeleton-table { width: 100%; }
+        .skeleton-table .skeleton-row { padding: 14px; }
+        .skeleton-table .skeleton-row .skeleton { flex-shrink: 0; }
+        .skeleton-table .skeleton-cell { height: 14px; border-radius: var(--radius-sm); }
+        .skeleton-table .skeleton-cell-sm { width: 60px; }
+        .skeleton-table .skeleton-cell-md { width: 120px; }
+        .skeleton-table .skeleton-cell-lg { flex: 1; min-width: 150px; }
+        .skeleton-table .skeleton-cell-badge { width: 70px; height: 22px; border-radius: 20px; }
+
+        /* Page content fade-in */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .page-content { animation: fadeInUp 0.3s ease-out; }
+
+        /* Notification slide-in */
+        .notif-item {
+            display: flex; gap: 12px; padding: 12px 16px; cursor: pointer;
+            transition: all 0.2s ease; border-bottom: 1px solid var(--border-subtle);
+            animation: notifSlideIn 0.25s ease-out;
+        }
+        .notif-item:hover { background: var(--bg-secondary); }
+        .notif-item.unread { background: var(--accent-soft); }
+        .notif-item.removing {
+            opacity: 0; transform: translateX(100%); max-height: 0;
+            padding-top: 0; padding-bottom: 0; margin: 0; overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        @keyframes notifSlideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .notif-icon {
+            width: 32px; height: 32px; border-radius: var(--radius-md);
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .notif-icon i { width: 16px; height: 16px; }
+        .notif-time { font-size: 10px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+        .notif-tabs {
+            display: flex; border-bottom: 1px solid var(--border); padding: 0 16px;
+        }
+        .notif-tab {
+            padding: 8px 12px; font-size: 11px; font-weight: 600; color: var(--text-muted);
+            background: none; border: none; cursor: pointer; position: relative;
+            transition: color 0.15s;
+        }
+        .notif-tab:hover { color: var(--text-primary); }
+        .notif-tab.active {
+            color: var(--accent);
+        }
+        .notif-tab.active::after {
+            content: ''; position: absolute; bottom: -1px; left: 0; right: 0;
+            height: 2px; background: var(--accent); border-radius: 1px;
+        }
+
+        /* ── EMPTY STATES ─────────────────────────────────────────── */
+        .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; text-align: center; }
+        .empty-state-icon {
+            width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            background: var(--bg-secondary); margin-bottom: 16px;
+        }
+        .empty-state-icon i { width: 28px; height: 28px; color: var(--text-muted); }
+        .empty-state h3 { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
+        .empty-state p { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; max-width: 320px; }
+
+        /* ── COMMAND PALETTE ───────────────────────────────────────── */
+        #cmd-palette-overlay {
+            display: none; position: fixed; inset: 0; z-index: 9998;
+            background: rgba(0,0,0,0.45); backdrop-filter: blur(4px);
+            align-items: flex-start; justify-content: center; padding-top: 15vh;
+        }
+        #cmd-palette-overlay.open { display: flex; }
+        #cmd-palette {
+            background: var(--bg-surface); border: 1px solid var(--border);
+            border-radius: var(--radius-xl); width: 560px; max-height: 480px;
+            box-shadow: var(--shadow-lg); overflow: hidden; display: flex; flex-direction: column;
+        }
+        #cmd-palette-input {
+            width: 100%; padding: 16px 20px; font-size: 15px; border: none; outline: none;
+            background: transparent; color: var(--text-primary);
+            border-bottom: 1px solid var(--border);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        #cmd-palette-input::placeholder { color: var(--text-muted); }
+        #cmd-palette-results { overflow-y: auto; max-height: 380px; padding: 8px; }
+        .cmd-group-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;
+                           letter-spacing: 0.5px; padding: 8px 12px 4px; }
+        .cmd-item {
+            display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+            border-radius: var(--radius-md); cursor: pointer; font-size: 13px; color: var(--text-secondary);
+        }
+        .cmd-item:hover, .cmd-item.active { background: var(--accent-soft); color: var(--accent); }
+        .cmd-item i { width: 16px; height: 16px; flex-shrink: 0; opacity: 0.6; }
+        .cmd-item:hover i, .cmd-item.active i { opacity: 1; }
+        .cmd-item-shortcut { margin-left: auto; font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+
+        /* ── TOAST NOTIFICATIONS ───────────────────────────────────── */
+        #toast-container {
+            position: fixed; bottom: 24px; right: 90px; z-index: 9999;
+            display: flex; flex-direction: column-reverse; gap: 8px; pointer-events: none;
+        }
+        .toast {
+            display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+            border-radius: var(--radius-lg); font-size: 13px; font-weight: 500;
+            background: var(--bg-elevated); color: var(--text-primary);
+            border: 1px solid var(--border); box-shadow: var(--shadow-lg);
+            min-width: 280px; max-width: 400px; pointer-events: auto;
+            animation: toast-in 0.3s cubic-bezier(.4,0,.2,1) forwards;
+            opacity: 0; transform: translateX(40px);
+        }
+        .toast.removing {
+            animation: toast-out 0.25s cubic-bezier(.4,0,.2,1) forwards;
+        }
+        @keyframes toast-in { to { opacity: 1; transform: translateX(0); } }
+        @keyframes toast-out { to { opacity: 0; transform: translateX(40px); } }
+        .toast-icon { width: 18px; height: 18px; flex-shrink: 0; }
+        .toast-msg { flex: 1; line-height: 1.4; }
+        .toast-close {
+            background: none; border: none; cursor: pointer; padding: 2px;
+            color: var(--text-muted); font-size: 16px; line-height: 1; flex-shrink: 0;
+        }
+        .toast-close:hover { color: var(--text-primary); }
+        .toast-success { border-left: 3px solid var(--success); }
+        .toast-success .toast-icon { color: var(--success); }
+        .toast-error { border-left: 3px solid var(--danger); }
+        .toast-error .toast-icon { color: var(--danger); }
+        .toast-warning { border-left: 3px solid var(--warning); }
+        .toast-warning .toast-icon { color: var(--warning); }
+        .toast-info { border-left: 3px solid var(--info); }
+        .toast-info .toast-icon { color: var(--info); }
+
+        /* ── CHAT WIDGET ───────────────────────────────────────────── */
+        #chat-widget { position: fixed; bottom: 24px; right: 24px; z-index: 1000; }
+        #chat-bubble {
+            width: 56px; height: 56px; border-radius: 50%; background: var(--accent-gradient);
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 24px rgba(99,102,241,0.35); transition: all 0.3s;
+        }
+        #chat-bubble:hover { transform: scale(1.08); box-shadow: 0 6px 30px rgba(99,102,241,0.5); }
+        #chat-panel {
+            display: none; width: 420px; height: 520px; background: var(--chat-bg);
+            border: 1px solid var(--border); border-radius: 18px;
+            box-shadow: var(--shadow-lg); flex-direction: column;
+            position: absolute; bottom: 70px; right: 0; overflow: hidden;
+        }
+        #chat-panel.open { display: flex; }
+        #chat-header {
+            padding: 16px 20px; border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--bg-secondary);
+        }
+        #chat-header span { color: var(--text-primary); }
+        #chat-messages { flex: 1; overflow-y: auto; padding: 16px 20px; background: var(--chat-messages-bg); }
+        #chat-messages .msg { margin-bottom: 14px; max-width: 85%; line-height: 1.5; }
+        #chat-messages .msg-user {
+            margin-left: auto; background: var(--accent-gradient); padding: 10px 16px;
+            border-radius: 16px 16px 4px 16px; font-size: 13px; color: white;
+        }
+        #chat-messages .msg-bot {
+            background: var(--chat-bot-bg); border: 1px solid var(--border); padding: 10px 16px;
+            border-radius: 16px 16px 16px 4px; font-size: 13px; color: var(--chat-bot-text); white-space: pre-wrap;
+        }
+        #chat-input-area { padding: 14px; border-top: 1px solid var(--border); display: flex; gap: 10px; background: var(--bg-surface); }
+        #chat-input {
+            flex: 1; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-lg);
+            padding: 10px 14px; color: var(--text-primary); font-size: 13px; outline: none;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        #chat-input:focus { border-color: var(--accent); background: var(--bg-surface); }
+        #chat-send {
+            background: var(--accent-gradient); border: none; border-radius: var(--radius-lg); padding: 10px 18px;
+            color: white; cursor: pointer; font-weight: 600; font-size: 13px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        #chat-send:hover { opacity: 0.9; }
+        #chat-send svg { display: inline; vertical-align: middle; }
+
+        /* Typing animation */
+        .typing-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: var(--text-muted); display: inline-block;
+            animation: typingBounce 1.4s infinite ease-in-out;
+        }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typingBounce {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Sage chips */
+        .sage-chip {
+            font-size: 11px; padding: 5px 12px; border-radius: 20px; cursor: pointer;
+            background: var(--accent-soft); color: var(--accent);
+            border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+            transition: all 0.15s; font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .sage-chip:hover {
+            transform: translateY(-1px); box-shadow: var(--shadow-sm);
+            background: color-mix(in srgb, var(--accent) 15%, transparent);
+        }
+        /* Sage action card in chat */
+        .sage-action {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: var(--radius-lg); padding: 10px 14px;
+            margin-top: 8px; font-size: 12px;
+        }
+        .sage-action-btn {
+            font-size: 11px; padding: 4px 10px; border-radius: var(--radius-md);
+            cursor: pointer; border: none; font-weight: 500;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        /* Notification dropdown items */
+        .notif-item {
+            display: flex; gap: 12px; padding: 12px 16px; cursor: pointer;
+            border-bottom: 1px solid var(--border-subtle); transition: all 0.15s;
+            position: relative;
+        }
+        .notif-item:hover { background: var(--bg-secondary); }
+        .notif-item:last-child { border-bottom: none; }
+        .notif-item.unread::before {
+            content: ''; position: absolute; left: 6px; top: 50%; transform: translateY(-50%);
+            width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+        }
+        .notif-item.removing {
+            opacity: 0; transform: translateX(20px); max-height: 0; padding: 0 16px;
+            border-bottom: none; overflow: hidden;
+        }
+        .notif-icon {
+            width: 32px; height: 32px; border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .notif-icon i { width: 14px; height: 14px; }
+        .notif-tabs {
+            display: flex; gap: 0; border-bottom: 1px solid var(--border);
+        }
+        .notif-tab {
+            flex: 1; padding: 8px 0; font-size: 11px; font-weight: 600;
+            text-align: center; cursor: pointer; border: none; background: none;
+            color: var(--text-muted); border-bottom: 2px solid transparent;
+            transition: all 0.15s; text-transform: uppercase; letter-spacing: 0.3px;
+        }
+        .notif-tab:hover { color: var(--text-secondary); background: var(--bg-secondary); }
+        .notif-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .notif-time { font-size: 10px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; white-space: nowrap; }
+
+        /* ── VOICE CONTROL ────────────────────────────────────────── */
+        .voice-btn {
+            width: 36px; height: 36px; border-radius: 50%; border: none;
+            background: var(--bg-secondary); color: var(--text-muted);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.2s ease; flex-shrink: 0;
+        }
+        .voice-btn:hover { background: var(--accent-soft); color: var(--accent); }
+        .voice-btn.voice-active {
+            background: var(--accent-gradient); color: white;
+            animation: voice-pulse 1.5s ease-in-out infinite;
+        }
+        .voice-btn.voice-active svg { filter: drop-shadow(0 0 4px rgba(255,255,255,0.5)); }
+        @keyframes voice-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.5); }
+            50% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
+        }
+        .voice-indicator {
+            display: none; align-items: center; gap: 6px; padding: 4px 12px;
+            border-radius: var(--radius-md); font-size: 11px; font-weight: 600;
+            background: var(--accent-soft); color: var(--accent);
+            animation: voice-indicator-fade 1.5s ease-in-out infinite;
+        }
+        .voice-indicator.active { display: flex; }
+        @keyframes voice-indicator-fade {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        .voice-indicator svg { width: 14px; height: 14px; }
+        .voice-waveform {
+            display: none; align-items: center; gap: 2px; height: 20px; padding: 0 4px;
+        }
+        .voice-waveform.active { display: flex; }
+        .voice-waveform span {
+            display: block; width: 3px; border-radius: 2px;
+            background: var(--accent); animation: waveform-bar 0.8s ease-in-out infinite;
+        }
+        .voice-waveform span:nth-child(1) { height: 6px; animation-delay: 0s; }
+        .voice-waveform span:nth-child(2) { height: 12px; animation-delay: 0.1s; }
+        .voice-waveform span:nth-child(3) { height: 18px; animation-delay: 0.2s; }
+        .voice-waveform span:nth-child(4) { height: 12px; animation-delay: 0.3s; }
+        .voice-waveform span:nth-child(5) { height: 6px; animation-delay: 0.4s; }
+        @keyframes waveform-bar {
+            0%, 100% { transform: scaleY(0.4); }
+            50% { transform: scaleY(1); }
+        }
+        .voice-header-btn {
+            padding: 6px; border-radius: var(--radius-md); border: none;
+            background: transparent; color: var(--text-muted); cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.15s;
+        }
+        .voice-header-btn:hover { background: var(--bg-secondary); color: var(--accent); }
+        .voice-header-btn.voice-active { color: var(--accent); background: var(--accent-soft); }
+
+        /* ── TRANSITIONS ───────────────────────────────────────────── */
+        a, button { transition: all var(--transition); }
+
+        /* ── SIDEBAR NAV ICONS ─────────────────────────────────────── */
+        .nav-icon { width: 18px; height: 18px; opacity: 0.5; }
+        .sidebar a.active .nav-icon { opacity: 1; color: var(--accent); }
+        .sidebar a:hover .nav-icon { opacity: 0.9; }
+
+        /* ── UTILITY: text color overrides using CSS vars ──────────── */
+        .text-v-primary { color: var(--text-primary); }
+        .text-v-secondary { color: var(--text-secondary); }
+        .text-v-muted { color: var(--text-muted); }
+        .bg-v-primary { background: var(--bg-primary); }
+        .bg-v-secondary { background: var(--bg-secondary); }
+        .bg-v-surface { background: var(--bg-surface); }
+        .bg-v-elevated { background: var(--bg-elevated); }
+        .border-v { border-color: var(--border); }
+        .border-v-subtle { border-color: var(--border-subtle); }
+
+        /* ── MOBILE HAMBURGER ─────────────────────────────────────── */
+        #mobile-menu-btn {
+            display: none; background: none; border: none; cursor: pointer;
+            color: var(--text-primary); padding: 6px; border-radius: var(--radius-md);
+        }
+        #mobile-menu-btn:hover { background: var(--bg-secondary); }
+
+        /* ── MOBILE OVERLAY ───────────────────────────────────────── */
+        #sidebar-overlay {
+            display: none; position: fixed; inset: 0; z-index: 49;
+            background: rgba(0,0,0,0.5); backdrop-filter: blur(2px);
+        }
+        #sidebar-overlay.open { display: block; }
+
+        /* ── RESPONSIVE: TABLET (≤1024px) ─────────────────────────── */
+        @media (max-width: 1024px) {
+            /* Reduce main padding */
+            main > .px-8 { padding-left: 24px; padding-right: 24px; }
+            header.px-8 { padding-left: 24px; padding-right: 24px; }
+
+            /* Shrink command palette search trigger */
+            header button[onclick="openCommandPalette()"] { min-width: 160px; }
+
+            /* KPI grids: max 3 columns */
+            .grid.md\:grid-cols-5 { grid-template-columns: repeat(3, 1fr); }
+            .grid.md\:grid-cols-4 { grid-template-columns: repeat(3, 1fr); }
+
+            /* Command palette narrower */
+            #cmd-palette { width: 480px; }
+
+            /* Chat panel slightly smaller */
+            #chat-panel { width: 380px; height: 480px; }
+        }
+
+        /* ── RESPONSIVE: MOBILE (≤768px) ──────────────────────────── */
+        @media (max-width: 768px) {
+            /* Show hamburger button */
+            #mobile-menu-btn { display: flex; align-items: center; justify-content: center; }
+
+            /* Sidebar: off-screen by default, slide in when .mobile-open */
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s cubic-bezier(.4,0,.2,1);
+                z-index: 50;
+                width: 260px !important;
+            }
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+            .sidebar.collapsed { width: 260px !important; }
+            .sidebar.collapsed .nav-label { opacity: 1; pointer-events: auto; width: auto; }
+            .sidebar.collapsed .sidebar-brand-text { opacity: 1; width: auto; overflow: visible; }
+
+            /* Main content: full width */
+            #main-content {
+                margin-left: 0 !important;
+            }
+
+            /* Reduce padding */
+            main > .px-8 { padding-left: 16px; padding-right: 16px; }
+            header.px-8 { padding-left: 16px; padding-right: 16px; }
+            main > .px-8.py-6 { padding-top: 16px; padding-bottom: 16px; }
+
+            /* Top bar: hide search trigger, show only icon */
+            header button[onclick="openCommandPalette()"] span.flex-1,
+            header button[onclick="openCommandPalette()"] kbd {
+                display: none;
+            }
+            header button[onclick="openCommandPalette()"] {
+                min-width: auto !important; padding: 8px;
+            }
+
+            /* Hide top-bar user avatar (already in sidebar) */
+            header .flex.items-center.gap-2:last-child { display: none; }
+
+            /* KPI grids: 2 columns */
+            .grid.grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+            .grid.md\:grid-cols-5 { grid-template-columns: repeat(2, 1fr); }
+            .grid.md\:grid-cols-4 { grid-template-columns: repeat(2, 1fr); }
+            .grid.md\:grid-cols-3 { grid-template-columns: repeat(2, 1fr); }
+
+            /* Tables: horizontal scroll */
+            .card.overflow-hidden { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            table { min-width: 600px; }
+
+            /* Stack filter bars */
+            .flex.gap-3.flex-wrap { flex-direction: column; }
+            .flex.gap-3.flex-wrap > * { min-width: 100% !important; width: 100%; }
+
+            /* Stack page headers */
+            .flex.justify-between.items-center.mb-6 {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            /* Flex row wrapping for action buttons */
+            .flex.gap-2.flex-wrap { flex-wrap: wrap; }
+
+            /* Command palette: nearly full width */
+            #cmd-palette { width: calc(100vw - 32px); max-width: 480px; }
+            #cmd-palette-overlay { padding-top: 10vh; padding-left: 16px; padding-right: 16px; }
+
+            /* Chat widget: full width panel */
+            #chat-panel {
+                width: calc(100vw - 32px);
+                max-width: 420px;
+                height: calc(100vh - 120px);
+                max-height: 520px;
+                right: -8px;
+            }
+
+            /* Toast: full width */
+            #toast-container {
+                right: 16px; left: 16px; bottom: 90px;
+            }
+            .toast { min-width: unset; max-width: 100%; width: 100%; }
+
+            /* View toggle buttons smaller */
+            .view-toggle button { padding: 5px 10px; font-size: 0.7rem; }
+
+            /* Kanban boards horizontal scroll */
+            .kanban-board { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .kanban-col { min-width: 240px; }
+
+            /* Cards grid: single column */
+            .cv-cards, .contact-cards { grid-template-columns: 1fr; }
+
+            /* Slide panel: full width */
+            .slide-panel { width: 100% !important; max-width: 100% !important; }
+
+            /* Settings tabs: horizontal scroll */
+            .settings-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; }
+            .settings-tab { white-space: nowrap; flex-shrink: 0; }
+
+            /* Chart containers */
+            canvas { max-height: 250px; }
+
+            /* Typography adjustments */
+            .text-2xl { font-size: 1.25rem; }
+            .text-3xl { font-size: 1.5rem; }
+            h1.text-2xl { font-size: 1.375rem; }
+
+            /* Notification dropdown: full width on mobile */
+            #notif-dropdown { width: calc(100vw - 32px) !important; right: -60px !important; max-height: 70vh !important; }
+
+            /* Dashboard: Goal ring + KPI stack */
+            .lg\:col-span-3 { grid-column: span 12; }
+            .lg\:col-span-9 { grid-column: span 12; }
+            .lg\:col-span-4 { grid-column: span 12; }
+            .lg\:col-span-5 { grid-column: span 12; }
+            .lg\:col-span-7 { grid-column: span 12; }
+            .lg\:col-span-8 { grid-column: span 12; }
+
+            /* Milestone badges: smaller on mobile */
+            .milestone-badge { min-width: 68px; max-width: 76px; padding: 10px 6px; }
+            .milestone-icon { width: 28px; height: 28px; }
+            .milestone-icon i { width: 14px; height: 14px; }
+            .milestone-label { font-size: 9px; }
+
+            /* Activity page: stat-mini row scroll */
+            .stat-mini { min-width: 70px; padding: 10px 12px; }
+            .stat-mini-value { font-size: 1rem; }
+
+            /* Activity filter: horizontal scroll */
+            .activity-filter { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .activity-filter button { flex-shrink: 0; }
+
+            /* Quick action grid: 2 columns always */
+            .grid.grid-cols-2.gap-3 { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        /* ── RESPONSIVE: SMALL PHONE (≤480px) ────────────────────── */
+        @media (max-width: 480px) {
+            /* Even tighter padding */
+            main > .px-8 { padding-left: 12px; padding-right: 12px; }
+            header.px-8 { padding-left: 12px; padding-right: 12px; }
+
+            /* KPI grids: single column for very small */
+            .grid.md\:grid-cols-5 { grid-template-columns: 1fr; }
+
+            /* Tables: tighter padding */
+            th, td { padding: 8px 10px; font-size: 12px; }
+
+            /* Badges smaller */
+            .badge { font-size: 10px; padding: 2px 7px; }
+
+            /* Buttons compact */
+            .btn { padding: 6px 12px; font-size: 12px; }
+
+            /* Chat bubble smaller */
+            #chat-bubble { width: 48px; height: 48px; }
+            #chat-bubble svg { width: 20px; height: 20px; }
+            #chat-widget { bottom: 16px; right: 16px; }
+
+            /* Chat panel full screen on very small */
+            #chat-panel {
+                width: calc(100vw - 16px);
+                height: calc(100vh - 100px);
+                right: -8px;
+                bottom: 60px;
+            }
+
+            /* Command palette full width */
+            #cmd-palette { width: calc(100vw - 16px); }
+            #cmd-palette-overlay { padding-left: 8px; padding-right: 8px; }
+
+            /* Cards tighter */
+            .card { border-radius: var(--radius-lg); }
+            .card.p-5, .card.p-6 { padding: 14px; }
+
+            /* Toast compact */
+            #toast-container { right: 8px; left: 8px; bottom: 72px; }
+        }
+
+        /* ── RESPONSIVE: PRINT ────────────────────────────────────── */
+        @media print {
+            .sidebar, #chat-widget, #cmd-palette-overlay, #toast-container,
+            header, #mobile-menu-btn, #sidebar-overlay { display: none !important; }
+            #main-content { margin-left: 0 !important; }
+            .card { box-shadow: none; border: 1px solid #ddd; }
+            body { background: white; color: black; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex">
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="sidebar fixed top-0 left-0 h-full flex flex-col z-50">
+        <!-- Brand -->
+        <div class="px-4 py-5 flex items-center gap-2.5" style="border-bottom: 1px solid var(--sidebar-border);">
+            <a href="/" class="flex items-center gap-2.5 flex-1 min-w-0">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background: var(--accent-gradient);">
+                    <svg width="16" height="16" fill="white" viewBox="0 0 16 16"><path d="M8 0L14.928 4v8L8 16 1.072 12V4z"/></svg>
+                </div>
+                <span class="text-base font-bold sidebar-brand-text" style="color: var(--sidebar-text-active);">Outreach Agent</span>
+            </a>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex-1 px-2 py-4 space-y-0.5">
+            <a href="/" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm {% if active == 'home' %}active{% endif %}">
+                <i data-lucide="layout-dashboard"></i>
+                <span class="nav-label">Dashboard</span>
+                <span class="nav-tooltip">Dashboard</span>
+            </a>
+            <a href="/jobs" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm {% if active == 'jobs' %}active{% endif %}">
+                <i data-lucide="briefcase"></i>
+                <span class="nav-label">Jobs</span>
+                <span class="nav-tooltip">Jobs</span>
+            </a>
+            <a href="/contacts" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm {% if active == 'contacts' %}active{% endif %}">
+                <i data-lucide="users"></i>
+                <span class="nav-label">Contacts</span>
+                <span class="nav-tooltip">Contacts</span>
+            </a>
+            <a href="/outreach" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm {% if active == 'outreach' %}active{% endif %}" style="position:relative;">
+                <i data-lucide="send"></i>
+                <span class="nav-label">Outreach</span>
+                {% if stats is defined and stats.drafts %}
+                <span class="nav-badge ml-auto">{{ stats.drafts }}</span>
+                {% endif %}
+                <span class="nav-tooltip">Outreach</span>
+            </a>
+            <a href="/analytics" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm {% if active == 'analytics' %}active{% endif %}">
+                <i data-lucide="bar-chart-3"></i>
+                <span class="nav-label">Analytics</span>
+                <span class="nav-tooltip">Analytics</span>
+            </a>
+            <a href="/applications" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm {% if active == 'applications' %}active{% endif %}">
+                <i data-lucide="rocket"></i>
+                <span class="nav-label">Applications</span>
+                <span class="nav-tooltip">Applications</span>
+            </a>
+            <a href="/cvs" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm {% if active == 'cvs' %}active{% endif %}">
+                <i data-lucide="file-text"></i>
+                <span class="nav-label">CVs</span>
+                <span class="nav-tooltip">CVs</span>
+            </a>
+            <a href="/activity" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm {% if active == 'activity' %}active{% endif %}">
+                <i data-lucide="activity"></i>
+                <span class="nav-label">Activity</span>
+                <span class="nav-tooltip">Activity</span>
+            </a>
+
+            <div style="border-top: 1px solid var(--sidebar-border);" class="my-3"></div>
+
+            <a href="/settings" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm {% if active == 'settings' %}active{% endif %}">
+                <i data-lucide="settings"></i>
+                <span class="nav-label">Settings</span>
+                <span class="nav-tooltip">Settings</span>
+            </a>
+        </nav>
+
+        <!-- Bottom controls -->
+        <div class="px-2 py-2 space-y-1" style="border-top: 1px solid var(--sidebar-border);">
+            <!-- Dark mode toggle -->
+            <button id="theme-toggle" onclick="toggleTheme()" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm w-full text-left" style="color: var(--sidebar-text); background: transparent; border: none; cursor: pointer;" onmouseover="this.style.background='var(--sidebar-hover)'" onmouseout="this.style.background='transparent'">
+                <i data-lucide="moon" id="theme-icon-moon" style="width:18px;height:18px;opacity:0.7;flex-shrink:0;"></i>
+                <i data-lucide="sun" id="theme-icon-sun" style="width:18px;height:18px;opacity:0.7;flex-shrink:0;display:none;"></i>
+                <span class="nav-label" id="theme-label">Dark Mode</span>
+            </button>
+            <!-- Collapse toggle -->
+            <button id="sidebar-collapse-btn" onclick="toggleSidebar()" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm w-full text-left" style="color: var(--sidebar-text); background: transparent; border: none; cursor: pointer;" onmouseover="this.style.background='var(--sidebar-hover)'" onmouseout="this.style.background='transparent'">
+                <i data-lucide="panel-left-close" id="sidebar-collapse-icon" style="width:18px;height:18px;opacity:0.7;flex-shrink:0;"></i>
+                <span class="nav-label" id="sidebar-collapse-label">Collapse</span>
+            </button>
+        </div>
+
+        <!-- User section -->
+        <div class="px-2 py-3" style="border-top: 1px solid var(--sidebar-border);" id="sidebar-user-section">
+            {% if user %}
+            <div class="flex items-center gap-3 px-3 py-2">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style="background: var(--accent-gradient);">
+                    {{ user.full_name[0]|upper if user.full_name else user.username[0]|upper }}
+                </div>
+                <div class="flex-1 min-w-0 nav-label">
+                    <div class="text-sm font-medium truncate" style="color: var(--sidebar-text-active);">{{ user.full_name or user.username }}</div>
+                    <div class="text-xs truncate" style="color: var(--sidebar-text);">{{ user.email }}</div>
+                </div>
+            </div>
+            <a href="/logout" onclick="localStorage.removeItem('oa_auth')" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm" style="color: var(--sidebar-text);" onmouseover="this.style.color='var(--danger)';this.style.background='var(--danger-soft)'" onmouseout="this.style.color='var(--sidebar-text)';this.style.background='transparent'">
+                <i data-lucide="log-out" style="width:16px;height:16px;flex-shrink:0;"></i>
+                <span class="nav-label">Sign Out</span>
+            </a>
+            {% else %}
+            <!-- Server doesn't see a user — JS will check localStorage -->
+            <div id="sidebar-guest">
+                <a href="/login" class="flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm text-white hover:opacity-90" style="background: var(--accent-gradient);">
+                    <i data-lucide="log-in" style="width:16px;height:16px;"></i>
+                    <span class="nav-label">Sign In</span>
+                </a>
+            </div>
+            <div id="sidebar-authed" class="hidden">
+                <div class="flex items-center gap-3 px-3 py-2">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style="background: var(--accent-gradient);" id="sidebar-avatar">?</div>
+                    <div class="flex-1 min-w-0 nav-label">
+                        <div class="text-sm font-medium truncate" style="color: var(--sidebar-text-active);" id="sidebar-uname">User</div>
+                        <div class="text-xs truncate" style="color: var(--sidebar-text);" id="sidebar-urole">Signed in</div>
+                    </div>
+                </div>
+                <a href="/logout" onclick="localStorage.removeItem('oa_auth')" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm" style="color: var(--sidebar-text);" onmouseover="this.style.color='var(--danger)';this.style.background='var(--danger-soft)'" onmouseout="this.style.color='var(--sidebar-text)';this.style.background='transparent'">
+                    <i data-lucide="log-out" style="width:16px;height:16px;flex-shrink:0;"></i>
+                    <span class="nav-label">Sign Out</span>
+                </a>
+            </div>
+            <script>
+            (function(){
+                try {
+                    var auth = JSON.parse(localStorage.getItem('oa_auth') || 'null');
+                    if (auth && auth.loggedIn) {
+                        document.getElementById('sidebar-guest').classList.add('hidden');
+                        document.getElementById('sidebar-authed').classList.remove('hidden');
+                        document.getElementById('sidebar-avatar').textContent = (auth.name||auth.user||'?')[0].toUpperCase();
+                        document.getElementById('sidebar-uname').textContent = auth.name || auth.user;
+                        document.getElementById('sidebar-urole').textContent = auth.user === 'demo' ? 'Demo Account' : 'Signed in';
+                    }
+                } catch(e){}
+            })();
+            </script>
+            {% endif %}
+        </div>
+    </aside>
+
+    <!-- Mobile sidebar overlay -->
+    <div id="sidebar-overlay" onclick="closeMobileMenu()"></div>
+
+    <!-- Main content -->
+    <main id="main-content" class="flex-1 ml-[240px]" style="transition: margin-left 0.25s cubic-bezier(.4,0,.2,1);">
+        <!-- Top bar -->
+        <header class="px-8 py-3 flex items-center justify-between sticky top-0 z-40" style="background: var(--bg-surface); border-bottom: 1px solid var(--border);">
+            <div class="flex items-center gap-3">
+                <!-- Mobile hamburger menu -->
+                <button id="mobile-menu-btn" onclick="openMobileMenu()" aria-label="Open menu">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </button>
+                <!-- Breadcrumb -->
+                <nav class="flex items-center gap-1.5 text-sm">
+                    <a href="/" style="color: var(--text-muted);" class="hover:underline">Dashboard</a>
+                    {% block breadcrumb %}{% endblock %}
+                </nav>
+            </div>
+            <div class="flex items-center gap-4">
+                <!-- Global search trigger -->
+                <button onclick="openCommandPalette()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm" style="background: var(--bg-secondary); border: 1px solid var(--border); color: var(--text-muted); min-width: 220px; cursor: pointer;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+                    <i data-lucide="search" style="width:14px;height:14px;"></i>
+                    <span class="flex-1 text-left">Search...</span>
+                    <kbd class="text-xs px-1.5 py-0.5 rounded" style="background: var(--bg-surface); border: 1px solid var(--border); font-family: 'JetBrains Mono', monospace;">{{ "⌘" }}K</kbd>
+                </button>
+                <!-- Notification bell with dropdown -->
+                <div style="position:relative;">
+                    <button id="notif-bell" onclick="toggleNotifDropdown()" class="relative p-2 rounded-lg" style="color: var(--text-muted);" onmouseover="this.style.background='var(--bg-secondary)'" onmouseout="this.style.background='transparent'">
+                        <i data-lucide="bell" style="width:18px;height:18px;"></i>
+                        <span id="notif-badge" class="absolute top-1 right-1 rounded-full" style="display:none;background:var(--danger);min-width:16px;height:16px;font-size:9px;font-weight:700;color:white;text-align:center;line-height:16px;padding:0 4px;font-family:'JetBrains Mono',monospace;"></span>
+                    </button>
+                    <!-- Notification Dropdown -->
+                    <div id="notif-dropdown" style="display:none;position:absolute;top:44px;right:0;width:420px;max-height:520px;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow-lg);overflow:hidden;z-index:100;">
+                        <div style="padding:14px 16px;display:flex;justify-content:space-between;align-items:center;">
+                            <div class="flex items-center gap-2">
+                                <span class="font-semibold text-sm" style="color:var(--text-primary);">Notifications</span>
+                                <span id="notif-count-badge" class="text-xs px-1.5 py-0.5 rounded-full font-data" style="background:var(--danger-soft);color:var(--danger);font-size:10px;"></span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="markAllRead()" class="text-xs" style="color:var(--text-muted);background:none;border:none;cursor:pointer;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">Mark read</button>
+                                <span style="color:var(--border);">|</span>
+                                <button onclick="dismissAllNotifs()" class="text-xs" style="color:var(--text-muted);background:none;border:none;cursor:pointer;" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--text-muted)'">Clear all</button>
+                            </div>
+                        </div>
+                        <div class="notif-tabs">
+                            <button class="notif-tab active" data-notif-tab="all" onclick="switchNotifTab('all',this)">All</button>
+                            <button class="notif-tab" data-notif-tab="urgent" onclick="switchNotifTab('urgent',this)">Urgent</button>
+                            <button class="notif-tab" data-notif-tab="actions" onclick="switchNotifTab('actions',this)">Actions</button>
+                            <button class="notif-tab" data-notif-tab="info" onclick="switchNotifTab('info',this)">Info</button>
+                        </div>
+                        <div id="notif-list" style="overflow-y:auto;max-height:380px;"></div>
+                        <div id="notif-empty" style="display:none;padding:32px;text-align:center;">
+                            <i data-lucide="bell-off" style="width:24px;height:24px;color:var(--text-muted);display:block;margin:0 auto 8px;"></i>
+                            <span class="text-xs" style="color:var(--text-muted);">All caught up!</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Voice control header button -->
+                <button id="voice-header-btn" class="voice-header-btn" onclick="toggleVoice()" title="Voice control (press V)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+                </button>
+                <!-- Voice status indicator -->
+                <div id="voice-indicator" class="voice-indicator">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/></svg>
+                    <span>Listening...</span>
+                </div>
+                <!-- User avatar -->
+                {% if user %}
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style="background: var(--accent-gradient);">
+                        {{ user.full_name[0]|upper if user.full_name else user.username[0]|upper }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </header>
+
+        <div class="px-8 py-6 max-w-7xl page-content">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Command Palette -->
+    <div id="cmd-palette-overlay" onclick="if(event.target===this)closeCommandPalette()">
+        <div id="cmd-palette">
+            <input type="text" id="cmd-palette-input" placeholder="Search jobs, contacts, actions..." autocomplete="off"
+                   oninput="searchCommandPalette(this.value)" onkeydown="handleCmdKey(event)">
+            <div id="cmd-palette-results"></div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- Sage AI Copilot Widget -->
+    <div id="chat-widget">
+        <div id="chat-panel">
+            <div id="chat-header">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background: var(--accent-gradient);box-shadow:0 2px 8px rgba(99,102,241,0.3);">
+                        <svg width="14" height="14" fill="white" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                    </div>
+                    <div>
+                        <span class="font-bold text-sm" style="color: var(--text-primary);">Sage</span>
+                        <div class="flex items-center gap-1.5" id="chat-context-indicator">
+                            <span class="w-1.5 h-1.5 rounded-full" style="background: var(--success);"></span>
+                            <span class="text-xs" style="color: var(--text-muted);">AI Copilot &middot; Can take actions</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1">
+                    <button onclick="clearChatHistory()" class="w-6 h-6 rounded flex items-center justify-center cursor-pointer" style="color: var(--text-muted); background: transparent; border: none;" onmouseover="this.style.background='var(--bg-secondary)'" onmouseout="this.style.background='transparent'" title="Clear history">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>
+                    </button>
+                    <button onclick="minimizeChat()" class="w-6 h-6 rounded flex items-center justify-center cursor-pointer" style="color: var(--text-muted); background: transparent; border: none;" onmouseover="this.style.background='var(--bg-secondary)'" onmouseout="this.style.background='transparent'" title="Minimize">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    </button>
+                    <button onclick="toggleChat()" class="w-6 h-6 rounded flex items-center justify-center cursor-pointer" style="color: var(--text-muted); background: transparent; border: none;" onmouseover="this.style.background='var(--bg-secondary)'" onmouseout="this.style.background='transparent'" title="Close">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div id="chat-messages">
+                <div class="msg msg-bot">
+                    <div style="font-weight:600;margin-bottom:4px;">Hey! I'm Sage, your AI copilot.</div>
+                    I can search your pipeline, edit drafts, approve messages, change settings, run pipeline actions, and give strategic advice. What do you need?
+                </div>
+                <!-- Suggested Prompts -->
+                <div id="chat-suggestions" class="px-3 py-2">
+                    <div class="text-xs font-medium mb-2" style="color: var(--text-muted);">Quick Actions</div>
+                    <div class="flex flex-wrap gap-1.5">
+                        <button onclick="useSuggestion(this)" class="sage-chip">What should I do today?</button>
+                        <button onclick="useSuggestion(this)" class="sage-chip">Show pending drafts</button>
+                        <button onclick="useSuggestion(this)" class="sage-chip">Pipeline summary</button>
+                        <button onclick="useSuggestion(this)" class="sage-chip">Best variant?</button>
+                    </div>
+                </div>
+            </div>
+            <div id="chat-input-area">
+                <input type="text" id="chat-input" placeholder="Ask Sage anything..." onkeydown="if(event.key==='Enter')sendChat()">
+                <!-- Voice waveform animation (visible when recording) -->
+                <div id="voice-waveform" class="voice-waveform">
+                    <span></span><span></span><span></span><span></span><span></span>
+                </div>
+                <!-- Voice mic button -->
+                <button id="voice-chat-btn" class="voice-btn" onclick="toggleVoice()" title="Voice input (press V)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+                </button>
+                <!-- Voice cancel button (visible only when recording) -->
+                <button id="voice-cancel-btn" onclick="cancelVoice()" title="Cancel recording (Esc)" style="display:none;width:28px;height:28px;border-radius:50%;border:none;background:var(--danger-soft);color:var(--danger);align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:14px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+                <button id="chat-send" onclick="sendChat()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </button>
+            </div>
+        </div>
+        <div id="chat-bubble" onclick="toggleChat()">
+            <svg width="22" height="22" fill="white" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            <span id="chat-notification-dot" style="display:none;position:absolute;top:3px;right:3px;width:10px;height:10px;border-radius:50%;background:var(--danger);border:2px solid var(--bg-primary);"></span>
+        </div>
+    </div>
+
+    <script>
+    /* ── Confirmation Modal ────────────────────────────────────── */
+    window.confirmAction = function(opts) {
+        return new Promise(function(resolve) {
+            var existing = document.getElementById('confirm-modal');
+            if (existing) existing.remove();
+            var modal = document.createElement('div');
+            modal.id = 'confirm-modal';
+            modal.style.cssText = 'position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);';
+            var destructive = opts.destructive || false;
+            modal.innerHTML = '<div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:24px;max-width:400px;width:90%;box-shadow:var(--shadow-lg);">' +
+                '<h3 style="font-size:16px;font-weight:600;color:var(--text-primary);margin-bottom:8px;">' + (opts.title || 'Confirm') + '</h3>' +
+                '<p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;line-height:1.5;">' + (opts.message || 'Are you sure?') + '</p>' +
+                (destructive ? '<input id="confirm-input" class="input" style="width:100%;margin-bottom:16px;" placeholder="Type ' + (opts.confirmText || 'DELETE') + ' to confirm">' : '') +
+                '<div style="display:flex;gap:10px;justify-content:flex-end;">' +
+                '<button class="btn btn-secondary" id="confirm-cancel">Cancel</button>' +
+                '<button class="btn ' + (destructive ? 'btn-danger' : 'btn-primary') + '" id="confirm-ok"' + (destructive ? ' disabled' : '') + '>' + (opts.okLabel || 'Confirm') + '</button>' +
+                '</div></div>';
+            document.body.appendChild(modal);
+            var cancel = document.getElementById('confirm-cancel');
+            var ok = document.getElementById('confirm-ok');
+            var inp = document.getElementById('confirm-input');
+            if (inp) inp.addEventListener('input', function() { ok.disabled = inp.value !== (opts.confirmText || 'DELETE'); });
+            cancel.onclick = function() { modal.remove(); resolve(false); };
+            ok.onclick = function() { if (!ok.disabled) { modal.remove(); resolve(true); } };
+            modal.addEventListener('click', function(e) { if (e.target === modal) { modal.remove(); resolve(false); } });
+            document.addEventListener('keydown', function handler(e) {
+                if (e.key === 'Escape') { modal.remove(); resolve(false); document.removeEventListener('keydown', handler); }
+            });
+            if (inp) inp.focus(); else ok.focus();
+        });
+    };
+
+    /* ── Toast Notification System ────────────────────────────── */
+    window.toast = (function() {
+        var icons = {
+            success: '<svg class="toast-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+            error: '<svg class="toast-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+            warning: '<svg class="toast-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>',
+            info: '<svg class="toast-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
+        };
+        function show(type, message, duration) {
+            var container = document.getElementById('toast-container');
+            if (!container) return;
+            // Max 3 toasts
+            while (container.children.length >= 3) {
+                container.removeChild(container.firstChild);
+            }
+            var el = document.createElement('div');
+            el.className = 'toast toast-' + type;
+            el.innerHTML = (icons[type] || icons.info) +
+                '<span class="toast-msg">' + message + '</span>' +
+                '<button class="toast-close" onclick="this.parentElement.classList.add(\'removing\');setTimeout(function(){this.remove()}.bind(this.parentElement),250)">&times;</button>';
+            container.appendChild(el);
+            // Auto dismiss
+            var dur = duration || 4000;
+            setTimeout(function() {
+                if (el.parentElement) {
+                    el.classList.add('removing');
+                    setTimeout(function() { if (el.parentElement) el.remove(); }, 250);
+                }
+            }, dur);
+        }
+        return {
+            success: function(msg, dur) { show('success', msg, dur); },
+            error: function(msg, dur) { show('error', msg, dur); },
+            warning: function(msg, dur) { show('warning', msg, dur); },
+            info: function(msg, dur) { show('info', msg, dur); }
+        };
+    })();
+
+    /* ── Initialize Lucide Icons ──────────────────────────────── */
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    });
+
+    /* ── Skeleton Loader Utility ──────────────────────────────── */
+    window.skeletonTable = function(container, rows, cols) {
+        rows = rows || 5;
+        cols = cols || 4;
+        var sizes = ['skeleton-cell-lg', 'skeleton-cell-md', 'skeleton-cell-md', 'skeleton-cell-sm', 'skeleton-cell-badge'];
+        var html = '<div class="skeleton-table">';
+        for (var i = 0; i < rows; i++) {
+            html += '<div class="skeleton-row" style="animation-delay:' + (i * 60) + 'ms;">';
+            for (var j = 0; j < cols; j++) {
+                html += '<div class="skeleton skeleton-cell ' + (sizes[j] || 'skeleton-cell-md') + '"></div>';
+            }
+            html += '</div>';
+        }
+        html += '</div>';
+        if (typeof container === 'string') container = document.getElementById(container);
+        if (container) container.innerHTML = html;
+        return html;
+    };
+
+    window.skeletonCards = function(container, count) {
+        count = count || 6;
+        var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">';
+        for (var i = 0; i < count; i++) {
+            html += '<div class="card p-5" style="animation:fadeInUp 0.3s ease-out ' + (i * 80) + 'ms both;">' +
+                '<div class="skeleton skeleton-heading" style="width:' + (50 + Math.random() * 30) + '%;"></div>' +
+                '<div class="skeleton skeleton-text" style="width:' + (60 + Math.random() * 30) + '%;"></div>' +
+                '<div class="skeleton skeleton-text-sm"></div>' +
+                '<div class="flex gap-2 mt-3"><div class="skeleton skeleton-cell-badge"></div><div class="skeleton skeleton-cell-badge"></div></div>' +
+                '</div>';
+        }
+        html += '</div>';
+        if (typeof container === 'string') container = document.getElementById(container);
+        if (container) container.innerHTML = html;
+        return html;
+    };
+
+    /* ── Context-Aware Sage Suggestions ───────────────────────── */
+    window.sageSuggestions = {
+        home: [
+            'What should I prioritize today?',
+            'Show pipeline summary',
+            'Any follow-ups due?',
+            'How is my outreach performing?',
+        ],
+        jobs: [
+            'Find high-fit jobs I haven\'t contacted',
+            'Which jobs need contacts enriched?',
+            'Show Tier 1 flagged roles',
+            'Suggest best companies to target',
+        ],
+        contacts: [
+            'Who should I reach out to next?',
+            'Show contacts without email',
+            'Any stale contacts to archive?',
+            'Enrich pending contacts',
+        ],
+        outreach: [
+            'Show pending drafts to review',
+            'Which variants are performing best?',
+            'Any follow-ups overdue?',
+            'Generate messages for new contacts',
+        ],
+        analytics: [
+            'Which variant should I kill?',
+            'Show reply rate trends',
+            'Compare referral vs value-first',
+            'When will we have enough data?',
+        ],
+        settings: [
+            'Check my API key status',
+            'What limits am I near?',
+            'Help me set up LinkedIn',
+            'Explain the A/B testing rules',
+        ],
+    };
+
+    window.getPageSuggestions = function() {
+        var page = (typeof currentPage !== 'undefined') ? currentPage : 'home';
+        var pool = window.sageSuggestions[page] || window.sageSuggestions.home;
+        // Shuffle and pick 3
+        var shuffled = pool.slice().sort(function() { return 0.5 - Math.random(); });
+        return shuffled.slice(0, 3);
+    };
+
+    /* ── Sidebar Collapse ─────────────────────────────────────── */
+    function applySidebarState() {
+        var sidebar = document.getElementById('sidebar');
+        var main = document.getElementById('main-content');
+        var collapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+        if (collapsed) {
+            sidebar.classList.add('collapsed');
+            main.style.marginLeft = '64px';
+        } else {
+            sidebar.classList.remove('collapsed');
+            main.style.marginLeft = '240px';
+        }
+        // Update collapse icon
+        var icon = document.getElementById('sidebar-collapse-icon');
+        var label = document.getElementById('sidebar-collapse-label');
+        if (icon) icon.setAttribute('data-lucide', collapsed ? 'panel-left-open' : 'panel-left-close');
+        if (label) label.textContent = collapsed ? 'Expand' : 'Collapse';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+    function toggleSidebar() {
+        var collapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+        localStorage.setItem('sidebar-collapsed', !collapsed);
+        applySidebarState();
+    }
+    document.addEventListener('DOMContentLoaded', applySidebarState);
+
+    /* ── Mobile Menu ──────────────────────────────────────────── */
+    function openMobileMenu() {
+        var sidebar = document.getElementById('sidebar');
+        var overlay = document.getElementById('sidebar-overlay');
+        sidebar.classList.add('mobile-open');
+        overlay.classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeMobileMenu() {
+        var sidebar = document.getElementById('sidebar');
+        var overlay = document.getElementById('sidebar-overlay');
+        sidebar.classList.remove('mobile-open');
+        overlay.classList.remove('open');
+        document.body.style.overflow = '';
+    }
+    // Close mobile menu on nav link click
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.sidebar .nav-link').forEach(function(link) {
+            link.addEventListener('click', function() {
+                if (window.innerWidth <= 768) closeMobileMenu();
+            });
+        });
+    });
+    // Close mobile menu on resize to desktop
+    window.addEventListener('resize', function() {
+        if (window.innerWidth > 768) {
+            closeMobileMenu();
+            applySidebarState();
+        }
+    });
+
+    /* ── Command Palette ──────────────────────────────────────── */
+    var cmdActiveIdx = -1;
+    var cmdPages = [
+        { label: 'Dashboard', icon: 'layout-dashboard', url: '/', shortcut: 'D' },
+        { label: 'Jobs', icon: 'briefcase', url: '/jobs', shortcut: 'J' },
+        { label: 'Contacts', icon: 'users', url: '/contacts', shortcut: 'C' },
+        { label: 'Outreach', icon: 'send', url: '/outreach', shortcut: 'O' },
+        { label: 'Analytics', icon: 'bar-chart-3', url: '/analytics', shortcut: 'A' },
+        { label: 'CVs', icon: 'file-text', url: '/cvs' },
+        { label: 'Settings', icon: 'settings', url: '/settings', shortcut: 'S' },
+    ];
+    var cmdActions = [
+        { label: 'Source new jobs', icon: 'download', action: 'source' },
+        { label: 'Generate messages', icon: 'sparkles', action: 'generate' },
+        { label: 'Run A/B report', icon: 'flask-conical', action: 'ab-report' },
+        { label: 'Send daily digest', icon: 'mail', action: 'digest' },
+    ];
+    function openCommandPalette() {
+        var overlay = document.getElementById('cmd-palette-overlay');
+        overlay.classList.add('open');
+        var input = document.getElementById('cmd-palette-input');
+        input.value = '';
+        input.focus();
+        cmdActiveIdx = -1;
+        renderCmdResults('');
+    }
+    function closeCommandPalette() {
+        document.getElementById('cmd-palette-overlay').classList.remove('open');
+    }
+    function fuzzyMatch(query, text) {
+        if (!query) return true;
+        var q = query.toLowerCase();
+        return text.toLowerCase().indexOf(q) !== -1;
+    }
+    function renderCmdResults(query) {
+        var results = document.getElementById('cmd-palette-results');
+        var html = '';
+        var items = [];
+        // Pages
+        var pages = cmdPages.filter(function(p) { return fuzzyMatch(query, p.label); });
+        if (pages.length) {
+            html += '<div class="cmd-group-label">Pages</div>';
+            pages.forEach(function(p) {
+                items.push({ type: 'url', url: p.url });
+                html += '<div class="cmd-item" data-idx="' + (items.length-1) + '" onclick="window.location.href=\'' + p.url + '\';closeCommandPalette()">' +
+                    '<i data-lucide="' + p.icon + '"></i>' + p.label +
+                    (p.shortcut ? '<span class="cmd-item-shortcut">' + p.shortcut + '</span>' : '') + '</div>';
+            });
+        }
+        // Actions
+        var actions = cmdActions.filter(function(a) { return fuzzyMatch(query, a.label); });
+        if (actions.length) {
+            html += '<div class="cmd-group-label">Actions</div>';
+            actions.forEach(function(a) {
+                items.push({ type: 'action', action: a.action });
+                html += '<div class="cmd-item" data-idx="' + (items.length-1) + '" onclick="runCmdAction(\'' + a.action + '\')">' +
+                    '<i data-lucide="' + a.icon + '"></i>' + a.label + '</div>';
+            });
+        }
+        if (!html) html = '<div style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">No results found</div>';
+        results.innerHTML = html;
+        window._cmdItems = items;
+        cmdActiveIdx = -1;
+        if (typeof lucide !== 'undefined') lucide.createIcons({ attrs: { class: '' } });
+    }
+    var _cmdSearchTimer = null;
+    function searchCommandPalette(query) {
+        renderCmdResults(query);
+        // Also fetch live search results for queries with 2+ chars
+        clearTimeout(_cmdSearchTimer);
+        if (query.length >= 2) {
+            _cmdSearchTimer = setTimeout(function() {
+                fetch('/api/search?q=' + encodeURIComponent(query) + '&limit=10')
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (!data.results || !data.results.length) return;
+                        var results = document.getElementById('cmd-palette-results');
+                        var html = results.innerHTML;
+                        html += '<div class="cmd-group-label">Search Results</div>';
+                        data.results.forEach(function(r) {
+                            html += '<div class="cmd-item" onclick="window.location.href=\'' + r.url + '\';closeCommandPalette()">' +
+                                '<i data-lucide="' + r.icon + '"></i>' +
+                                '<div><div>' + r.title + '</div><div style="font-size:11px;color:var(--text-muted);">' + r.subtitle + '</div></div></div>';
+                        });
+                        results.innerHTML = html;
+                        if (typeof lucide !== 'undefined') lucide.createIcons({ attrs: { class: '' } });
+                    }).catch(function() {});
+            }, 300);
+        }
+    }
+    function handleCmdKey(e) {
+        var items = document.querySelectorAll('#cmd-palette-results .cmd-item');
+        if (e.key === 'Escape') { closeCommandPalette(); return; }
+        if (e.key === 'ArrowDown') { e.preventDefault(); cmdActiveIdx = Math.min(cmdActiveIdx + 1, items.length - 1); }
+        if (e.key === 'ArrowUp') { e.preventDefault(); cmdActiveIdx = Math.max(cmdActiveIdx - 1, 0); }
+        if (e.key === 'Enter' && cmdActiveIdx >= 0 && items[cmdActiveIdx]) { items[cmdActiveIdx].click(); return; }
+        items.forEach(function(el, i) { el.classList.toggle('active', i === cmdActiveIdx); });
+        if (items[cmdActiveIdx]) items[cmdActiveIdx].scrollIntoView({ block: 'nearest' });
+    }
+    function runCmdAction(action) {
+        closeCommandPalette();
+        window.toast.info('Running: ' + action + '...');
+        fetch('/api/actions/' + action, { method: 'POST' })
+            .then(function(r) { return r.json(); })
+            .then(function(d) { window.toast.success(d.message || action + ' completed'); })
+            .catch(function() { window.toast.error(action + ' failed'); });
+    }
+    document.addEventListener('keydown', function(e) {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+            e.preventDefault();
+            var overlay = document.getElementById('cmd-palette-overlay');
+            if (overlay.classList.contains('open')) closeCommandPalette();
+            else openCommandPalette();
+        }
+    });
+
+    /* ── Dark Mode Toggle ──────────────────────────────────────── */
+    function applyThemeUI() {
+        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        var sun = document.getElementById('theme-icon-sun');
+        var moon = document.getElementById('theme-icon-moon');
+        var label = document.getElementById('theme-label');
+        if (sun) sun.style.display = isDark ? 'inline-block' : 'none';
+        if (moon) moon.style.display = isDark ? 'none' : 'inline-block';
+        if (label) label.textContent = isDark ? 'Light Mode' : 'Dark Mode';
+        // Update Chart.js defaults for new charts
+        if (typeof Chart !== 'undefined') {
+            Chart.defaults.color = isDark ? '#A1A1AA' : '#52525B';
+            Chart.defaults.borderColor = isDark ? '#27272A' : '#E4E4E7';
+        }
+    }
+    function toggleTheme() {
+        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        if (isDark) {
+            document.documentElement.removeAttribute('data-theme');
+            localStorage.setItem('theme', 'light');
+        } else {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            localStorage.setItem('theme', 'dark');
+        }
+        applyThemeUI();
+    }
+    // Apply on load
+    document.addEventListener('DOMContentLoaded', applyThemeUI);
+
+    /* ── Sage AI Copilot ───────────────────────────────────────── */
+    var chatMinimized = false;
+    var sageHistory = [];
+    var currentPage = '{{ active|default("dashboard") }}';
+    var chatSending = false;
+
+    // Restore chat history from localStorage
+    (function restoreChatHistory() {
+        try {
+            var saved = JSON.parse(localStorage.getItem('sage_chat_history') || '[]');
+            if (saved.length > 0) {
+                sageHistory = saved.slice(-20);
+                var messages = document.getElementById('chat-messages');
+                if (messages && saved.length > 0) {
+                    // Hide initial suggestions if there's history
+                    var initSugg = document.getElementById('chat-suggestions');
+                    if (initSugg) initSugg.style.display = 'none';
+
+                    // Render last 10 messages
+                    saved.slice(-10).forEach(function(item) {
+                        var div = document.createElement('div');
+                        div.className = 'msg ' + (item.role === 'user' ? 'msg-user' : 'msg-bot');
+                        if (item.role === 'user') {
+                            div.textContent = item.content;
+                        } else {
+                            div.innerHTML = item.html || item.content;
+                        }
+                        // Add timestamp
+                        if (item.timestamp) {
+                            var ts = document.createElement('div');
+                            ts.style.cssText = 'font-size:10px;color:var(--text-muted);margin-top:4px;text-align:right;font-family:"JetBrains Mono",monospace;';
+                            ts.textContent = item.timestamp;
+                            div.appendChild(ts);
+                        }
+                        messages.appendChild(div);
+                    });
+                    // Add separator
+                    var sep = document.createElement('div');
+                    sep.style.cssText = 'text-align:center;padding:8px;font-size:10px;color:var(--text-muted);border-top:1px dashed var(--border);margin:8px 0;';
+                    sep.innerHTML = '<i data-lucide="history" style="width:10px;height:10px;display:inline;vertical-align:-1px;"></i> Previous session';
+                    messages.appendChild(sep);
+                    setTimeout(function() { messages.scrollTop = messages.scrollHeight; }, 100);
+                }
+            }
+        } catch(e) { console.warn('Failed to restore chat history:', e); }
+    })();
+
+    function saveChatHistory() {
+        try {
+            localStorage.setItem('sage_chat_history', JSON.stringify(sageHistory.slice(-20)));
+        } catch(e) {}
+    }
+
+    function toggleChat() {
+        var panel = document.getElementById('chat-panel');
+        chatMinimized = false;
+        panel.classList.toggle('open');
+        panel.style.height = '';
+        panel.style.overflow = '';
+        if (panel.classList.contains('open')) {
+            document.getElementById('chat-input').focus();
+            document.getElementById('chat-notification-dot').style.display = 'none';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+    }
+    function clearChatHistory() {
+        sageHistory = [];
+        localStorage.removeItem('sage_chat_history');
+        var messages = document.getElementById('chat-messages');
+        // Keep only the initial bot greeting
+        messages.innerHTML =
+            '<div class="msg msg-bot">' +
+            '<div style="font-weight:600;margin-bottom:4px;">Hey! I\'m Sage, your AI copilot.</div>' +
+            'I can search your pipeline, edit drafts, approve messages, change settings, run pipeline actions, and give strategic advice. What do you need?' +
+            '</div>' +
+            '<div id="chat-suggestions" class="px-3 py-2">' +
+            '<div class="text-xs font-medium mb-2" style="color: var(--text-muted);">Quick Actions</div>' +
+            '<div class="flex flex-wrap gap-1.5">' +
+            '<button onclick="useSuggestion(this)" class="sage-chip">What should I do today?</button>' +
+            '<button onclick="useSuggestion(this)" class="sage-chip">Show pending drafts</button>' +
+            '<button onclick="useSuggestion(this)" class="sage-chip">Pipeline summary</button>' +
+            '<button onclick="useSuggestion(this)" class="sage-chip">Best variant?</button>' +
+            '</div></div>';
+        if (window.toast) window.toast.info('Chat history cleared');
+    }
+
+    function minimizeChat() {
+        var panel = document.getElementById('chat-panel');
+        if (chatMinimized) {
+            panel.style.height = '';
+            panel.style.overflow = '';
+            chatMinimized = false;
+        } else {
+            panel.style.height = '48px';
+            panel.style.overflow = 'hidden';
+            chatMinimized = true;
+        }
+    }
+    function useSuggestion(btn) {
+        var text = btn.textContent.trim();
+        document.getElementById('chat-input').value = text;
+        sendChat();
+    }
+
+    // Global function to open Sage with a pre-filled message
+    window.openSageChat = function(message) {
+        var panel = document.getElementById('chat-panel');
+        if (!panel.classList.contains('open')) toggleChat();
+        if (message) {
+            document.getElementById('chat-input').value = message;
+            setTimeout(sendChat, 200);
+        }
+    };
+
+    function formatTime(date) {
+        var h = date.getHours();
+        var m = date.getMinutes();
+        var ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12; if (h === 0) h = 12;
+        return h + ':' + (m < 10 ? '0' : '') + m + ' ' + ampm;
+    }
+
+    function addTimestamp(container) {
+        var ts = document.createElement('div');
+        ts.style.cssText = 'font-size:10px;color:var(--text-muted);margin-top:4px;text-align:right;font-family:"JetBrains Mono",monospace;';
+        ts.textContent = formatTime(new Date());
+        container.appendChild(ts);
+    }
+
+    function renderSageReply(data, container) {
+        var text = data.reply || 'No response.';
+        // Markdown-lite: **bold**, `code`, bullet points
+        text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        text = text.replace(/`([^`]+)`/g, '<code style="background:var(--bg-secondary);padding:1px 5px;border-radius:3px;font-size:12px;font-family:JetBrains Mono,monospace;">$1</code>');
+        text = text.replace(/^• /gm, '<span style="color:var(--accent);">&#8227;</span> ');
+        text = text.replace(/^- /gm, '<span style="color:var(--accent);">&#8227;</span> ');
+        container.innerHTML = text;
+
+        // Action cards
+        if (data.actions && data.actions.length > 0) {
+            data.actions.forEach(function(action) {
+                if (action.type === 'navigate') {
+                    var ac = document.createElement('div');
+                    ac.className = 'sage-action';
+                    ac.innerHTML =
+                        '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+                        '<span style="color:var(--text-secondary);font-size:12px;"><i data-lucide="external-link" style="width:12px;height:12px;display:inline;vertical-align:middle;margin-right:4px;"></i>' + action.url + '</span>' +
+                        '<a href="' + action.url + '" class="sage-action-btn" style="background:var(--accent-soft);color:var(--accent);">Go</a>' +
+                        '</div>';
+                    container.appendChild(ac);
+                } else if (action.type === 'refresh') {
+                    var rc = document.createElement('div');
+                    rc.className = 'sage-action';
+                    rc.innerHTML =
+                        '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+                        '<span style="color:var(--success);font-size:12px;"><i data-lucide="check-circle" style="width:12px;height:12px;display:inline;vertical-align:middle;margin-right:4px;"></i>Applied to ' + action.section + '</span>' +
+                        '<button onclick="window.location.reload()" class="sage-action-btn" style="background:var(--success-soft);color:var(--success);">Refresh</button>' +
+                        '</div>';
+                    container.appendChild(rc);
+                } else if (action.type === 'toast') {
+                    if (window.toast) window.toast[action.toast_type || 'info'](action.message);
+                }
+            });
+        }
+
+        // Suggestions — use server-provided or fall back to context-aware ones
+        var sugList = (data.suggestions && data.suggestions.length > 0) ? data.suggestions : window.getPageSuggestions();
+        if (sugList.length > 0) {
+            var sugDiv = document.createElement('div');
+            sugDiv.style.cssText = 'margin-top:10px;display:flex;flex-wrap:wrap;gap:5px;';
+            sugList.forEach(function(s) {
+                var chip = document.createElement('button');
+                chip.className = 'sage-chip';
+                chip.textContent = s;
+                chip.onclick = function() { useSuggestion(chip); };
+                sugDiv.appendChild(chip);
+            });
+            container.appendChild(sugDiv);
+        }
+
+        addTimestamp(container);
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    function createRetryButton(failedMsg) {
+        var btn = document.createElement('button');
+        btn.className = 'sage-action-btn';
+        btn.style.cssText = 'background:var(--warning-soft);color:var(--warning);margin-top:8px;padding:6px 14px;border-radius:var(--radius-md);cursor:pointer;border:none;font-size:12px;display:inline-flex;align-items:center;gap:4px;font-family:Plus Jakarta Sans,sans-serif;';
+        btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg> Retry';
+        btn.onclick = function() {
+            btn.parentElement.remove();
+            document.getElementById('chat-input').value = failedMsg;
+            sendChat();
+        };
+        return btn;
+    }
+
+    async function sendChat() {
+        if (chatSending) return;
+        var input = document.getElementById('chat-input');
+        var msg = input.value.trim();
+        if (!msg) return;
+        chatSending = true;
+        var messages = document.getElementById('chat-messages');
+        var sendBtn = document.getElementById('chat-send');
+
+        // Disable send button
+        sendBtn.disabled = true;
+        sendBtn.style.opacity = '0.5';
+
+        // Hide initial suggestions
+        var initSugg = document.getElementById('chat-suggestions');
+        if (initSugg) initSugg.style.display = 'none';
+
+        // Context indicator
+        var ctx = document.getElementById('chat-context-indicator');
+        if (ctx) ctx.querySelector('span:last-child').textContent = 'Processing...';
+
+        // User message with timestamp
+        var userDiv = document.createElement('div');
+        userDiv.className = 'msg msg-user';
+        userDiv.textContent = msg;
+        messages.appendChild(userDiv);
+        addTimestamp(userDiv);
+        input.value = '';
+        messages.scrollTop = messages.scrollHeight;
+
+        sageHistory.push({role: 'user', content: msg, timestamp: formatTime(new Date())});
+        saveChatHistory();
+
+        // Typing indicator
+        var typingDiv = document.createElement('div');
+        typingDiv.className = 'msg msg-bot';
+        typingDiv.innerHTML = '<span style="display:inline-flex;gap:4px;align-items:center;"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span><span style="font-size:11px;color:var(--text-muted);margin-left:6px;">Sage is thinking...</span></span>';
+        messages.appendChild(typingDiv);
+        messages.scrollTop = messages.scrollHeight;
+
+        try {
+            var controller = new AbortController();
+            var timeout = setTimeout(function() { controller.abort(); }, 30000);
+
+            // Try to get API key from localStorage for Vercel deployments
+            var _apiKeys = {};
+            try { _apiKeys = JSON.parse(localStorage.getItem('api_keys') || '{}'); } catch(e){}
+            var _sageKey = _apiKeys.anthropic_api_key || '';
+
+            var resp = await fetch('/api/sage', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: msg,
+                    history: sageHistory.slice(-10),
+                    context: currentPage,
+                    api_key: _sageKey,
+                }),
+                signal: controller.signal,
+            });
+            clearTimeout(timeout);
+
+            if (!resp.ok) {
+                throw new Error('Server returned ' + resp.status);
+            }
+            var data = await resp.json();
+
+            typingDiv.innerHTML = '';
+            renderSageReply(data, typingDiv);
+            sageHistory.push({role: 'assistant', content: data.reply || '', html: typingDiv.innerHTML, timestamp: formatTime(new Date())});
+            saveChatHistory();
+
+        } catch (e) {
+            typingDiv.innerHTML = '';
+            var errorMsg = 'Connection error.';
+            if (e.name === 'AbortError') {
+                errorMsg = 'Request timed out (30s). The server may be busy.';
+            } else if (e.message && e.message.indexOf('Server returned') !== -1) {
+                errorMsg = e.message + '. Check your API key in Settings.';
+            } else {
+                errorMsg = 'Could not reach the server. Is it running?';
+            }
+            typingDiv.innerHTML = '<div style="color:var(--danger);font-size:12px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;margin-right:4px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' + errorMsg + '</div>';
+            typingDiv.appendChild(createRetryButton(msg));
+            // Remove failed message from history
+            sageHistory.pop();
+        }
+
+        // Restore UI
+        if (ctx) ctx.querySelector('span:last-child').textContent = 'AI Copilot \u00B7 Can take actions';
+        sendBtn.disabled = false;
+        sendBtn.style.opacity = '1';
+        chatSending = false;
+        messages.scrollTop = messages.scrollHeight;
+    }
+
+    /* ── Notification System ───────────────────────────────────── */
+    var notifDropdownOpen = false;
+    var dismissedNotifs = JSON.parse(localStorage.getItem('dismissed-notifs') || '[]');
+    var readNotifs = JSON.parse(localStorage.getItem('read-notifs') || '[]');
+    var cachedNotifs = [];
+    var activeNotifTab = 'all';
+
+    function timeAgo(dateStr) {
+        if (!dateStr) return '';
+        var now = new Date();
+        var date = new Date(dateStr);
+        var diff = Math.floor((now - date) / 1000);
+        if (diff < 60) return 'now';
+        if (diff < 3600) return Math.floor(diff / 60) + 'm';
+        if (diff < 86400) return Math.floor(diff / 3600) + 'h';
+        if (diff < 604800) return Math.floor(diff / 86400) + 'd';
+        return Math.floor(diff / 604800) + 'w';
+    }
+
+    function toggleNotifDropdown() {
+        var dropdown = document.getElementById('notif-dropdown');
+        notifDropdownOpen = !notifDropdownOpen;
+        dropdown.style.display = notifDropdownOpen ? 'block' : 'none';
+        if (notifDropdownOpen) loadNotifications();
+    }
+
+    document.addEventListener('click', function(e) {
+        if (notifDropdownOpen && !e.target.closest('#notif-bell') && !e.target.closest('#notif-dropdown')) {
+            document.getElementById('notif-dropdown').style.display = 'none';
+            notifDropdownOpen = false;
+        }
+    });
+
+    function switchNotifTab(tab, btn) {
+        activeNotifTab = tab;
+        document.querySelectorAll('.notif-tab').forEach(function(t) { t.classList.remove('active'); });
+        btn.classList.add('active');
+        renderNotifications(cachedNotifs);
+    }
+
+    function filterNotifsByTab(notifs, tab) {
+        if (tab === 'all') return notifs;
+        if (tab === 'urgent') return notifs.filter(function(n) { return n.severity === 'urgent' || n.severity === 'warning'; });
+        if (tab === 'actions') return notifs.filter(function(n) { return n.category === 'action' || n.action_url; });
+        if (tab === 'info') return notifs.filter(function(n) { return n.severity === 'info' || n.severity === 'muted'; });
+        return notifs;
+    }
+
+    function renderNotifications(notifs) {
+        var list = document.getElementById('notif-list');
+        var empty = document.getElementById('notif-empty');
+        var countBadge = document.getElementById('notif-count-badge');
+        var bellBadge = document.getElementById('notif-badge');
+
+        var filtered = filterNotifsByTab(notifs, activeNotifTab);
+
+        if (filtered.length === 0) {
+            list.style.display = 'none';
+            empty.style.display = 'block';
+            if (notifs.length > 0) {
+                countBadge.textContent = notifs.length;
+                countBadge.style.display = 'inline';
+            } else {
+                countBadge.style.display = 'none';
+                bellBadge.style.display = 'none';
+            }
+            return;
+        }
+
+        list.style.display = 'block';
+        empty.style.display = 'none';
+        countBadge.textContent = notifs.length;
+        countBadge.style.display = 'inline';
+
+        var urgentCount = notifs.filter(function(n) {
+            return (n.severity === 'urgent' || n.severity === 'warning') && readNotifs.indexOf(n.id) === -1;
+        }).length;
+        if (urgentCount > 0) {
+            bellBadge.textContent = urgentCount;
+            bellBadge.style.display = 'block';
+        } else {
+            bellBadge.style.display = 'none';
+        }
+
+        var severityColors = {
+            urgent: {bg: 'var(--danger-soft)', icon: 'var(--danger)', label: 'URGENT'},
+            warning: {bg: 'var(--warning-soft)', icon: 'var(--warning)', label: 'WARNING'},
+            info: {bg: 'var(--info-soft)', icon: 'var(--info)', label: ''},
+            muted: {bg: 'var(--bg-secondary)', icon: 'var(--text-muted)', label: ''},
+        };
+
+        list.innerHTML = filtered.map(function(n) {
+            var colors = severityColors[n.severity] || severityColors.info;
+            var isRead = readNotifs.indexOf(n.id) !== -1;
+            var ago = timeAgo(n.created_at || n.timestamp);
+            return '<div class="notif-item' + (isRead ? '' : ' unread') + '" data-notif-id="' + n.id + '" onclick="handleNotifClick(\'' + (n.action_url || '/') + '\',\'' + n.id + '\')">' +
+                '<div class="notif-icon" style="background:' + colors.bg + ';">' +
+                '<i data-lucide="' + (n.icon || 'bell') + '" style="color:' + colors.icon + ';"></i>' +
+                '</div>' +
+                '<div style="flex:1;min-width:0;">' +
+                (colors.label ? '<span style="font-size:9px;font-weight:700;letter-spacing:0.5px;color:' + colors.icon + ';text-transform:uppercase;">' + colors.label + '</span> ' : '') +
+                '<div style="font-size:13px;font-weight:' + (isRead ? '400' : '600') + ';color:var(--text-primary);line-height:1.4;">' + n.title + '</div>' +
+                '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">' + (n.detail || '') + '</div>' +
+                '</div>' +
+                '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">' +
+                (ago ? '<span class="notif-time">' + ago + '</span>' : '') +
+                '<button class="sage-action-btn" style="background:' + colors.bg + ';color:' + colors.icon + ';" onclick="event.stopPropagation();handleNotifClick(\'' + (n.action_url || '/') + '\',\'' + n.id + '\')">' + (n.action_label || 'View') + '</button>' +
+                '<button onclick="event.stopPropagation();dismissNotif(\'' + n.id + '\',this)" style="font-size:10px;color:var(--text-muted);background:none;border:none;cursor:pointer;" onmouseover="this.style.color=\'var(--danger)\'" onmouseout="this.style.color=\'var(--text-muted)\'">Dismiss</button>' +
+                '</div>' +
+                '</div>';
+        }).join('');
+
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    function loadNotifications() {
+        fetch('/api/notifications')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                cachedNotifs = (data.notifications || []).filter(function(n) {
+                    return dismissedNotifs.indexOf(n.id) === -1;
+                });
+                renderNotifications(cachedNotifs);
+            })
+            .catch(function() {});
+    }
+
+    function handleNotifClick(url, id) {
+        if (id) markAsRead(id);
+        if (url && url !== '#' && url !== '/') window.location.href = url;
+    }
+
+    function markAsRead(id) {
+        if (readNotifs.indexOf(id) === -1) {
+            readNotifs.push(id);
+            localStorage.setItem('read-notifs', JSON.stringify(readNotifs));
+        }
+        var item = document.querySelector('.notif-item[data-notif-id="' + id + '"]');
+        if (item) item.classList.remove('unread');
+        updateBellBadge();
+    }
+
+    function markAllRead() {
+        cachedNotifs.forEach(function(n) {
+            if (readNotifs.indexOf(n.id) === -1) readNotifs.push(n.id);
+        });
+        localStorage.setItem('read-notifs', JSON.stringify(readNotifs));
+        document.querySelectorAll('.notif-item.unread').forEach(function(el) { el.classList.remove('unread'); });
+        document.querySelectorAll('.notif-item div[style*="font-weight:600"]').forEach(function(el) { el.style.fontWeight = '400'; });
+        updateBellBadge();
+    }
+
+    function updateBellBadge() {
+        var urgentUnread = cachedNotifs.filter(function(n) {
+            return (n.severity === 'urgent' || n.severity === 'warning') && readNotifs.indexOf(n.id) === -1;
+        }).length;
+        var badge = document.getElementById('notif-badge');
+        if (urgentUnread > 0) {
+            badge.textContent = urgentUnread;
+            badge.style.display = 'block';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+
+    function dismissNotif(id, btn) {
+        dismissedNotifs.push(id);
+        localStorage.setItem('dismissed-notifs', JSON.stringify(dismissedNotifs));
+        var item = btn.closest('.notif-item');
+        if (item) {
+            item.classList.add('removing');
+            setTimeout(function() {
+                item.remove();
+                cachedNotifs = cachedNotifs.filter(function(n) { return n.id !== id; });
+                if (document.getElementById('notif-list').children.length === 0) {
+                    document.getElementById('notif-list').style.display = 'none';
+                    document.getElementById('notif-empty').style.display = 'block';
+                    document.getElementById('notif-count-badge').style.display = 'none';
+                    document.getElementById('notif-badge').style.display = 'none';
+                } else {
+                    document.getElementById('notif-count-badge').textContent = cachedNotifs.length;
+                }
+                updateBellBadge();
+            }, 250);
+        }
+    }
+
+    function dismissAllNotifs() {
+        cachedNotifs.forEach(function(n) { dismissedNotifs.push(n.id); });
+        localStorage.setItem('dismissed-notifs', JSON.stringify(dismissedNotifs));
+        cachedNotifs = [];
+        var items = document.querySelectorAll('.notif-item');
+        items.forEach(function(item, i) {
+            setTimeout(function() { item.classList.add('removing'); }, i * 40);
+        });
+        setTimeout(function() {
+            document.getElementById('notif-list').innerHTML = '';
+            document.getElementById('notif-list').style.display = 'none';
+            document.getElementById('notif-empty').style.display = 'block';
+            document.getElementById('notif-count-badge').style.display = 'none';
+            document.getElementById('notif-badge').style.display = 'none';
+        }, items.length * 40 + 250);
+    }
+
+    // Load notification count on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        fetch('/api/notifications')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var notifs = (data.notifications || []).filter(function(n) {
+                    return dismissedNotifs.indexOf(n.id) === -1;
+                });
+                cachedNotifs = notifs;
+                var urgent = notifs.filter(function(n) {
+                    return (n.severity === 'urgent' || n.severity === 'warning') && readNotifs.indexOf(n.id) === -1;
+                }).length;
+                var badge = document.getElementById('notif-badge');
+                if (urgent > 0) {
+                    badge.textContent = urgent;
+                    badge.style.display = 'block';
+                }
+            })
+            .catch(function() {});
+    });
+
+    // Refresh notifications every 2 minutes
+    setInterval(function() {
+        if (!notifDropdownOpen) {
+            fetch('/api/notifications')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var notifs = (data.notifications || []).filter(function(n) {
+                        return dismissedNotifs.indexOf(n.id) === -1;
+                    });
+                    cachedNotifs = notifs;
+                    var urgent = notifs.filter(function(n) {
+                        return (n.severity === 'urgent' || n.severity === 'warning') && readNotifs.indexOf(n.id) === -1;
+                    }).length;
+                    var badge = document.getElementById('notif-badge');
+                    if (urgent > 0) {
+                        badge.textContent = urgent;
+                        badge.style.display = 'block';
+                        var chatDot = document.getElementById('chat-notification-dot');
+                        var chatPanel = document.getElementById('chat-panel');
+                        if (chatDot && !chatPanel.classList.contains('open')) {
+                            chatDot.style.display = 'block';
+                        }
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                })
+                .catch(function() {});
+        }
+    }, 120000);
+
+    /* ── VOICE CONTROL SYSTEM ──────────────────────────────────── */
+    var voiceRecognition = null;
+    var voiceActive = false;
+    var voiceSupported = false;
+    var voiceInitAttempted = false;
+    var voiceGotResult = false;
+    var voiceCancelled = false;
+
+    function initVoice() {
+        if (voiceInitAttempted) return;
+        voiceInitAttempted = true;
+
+        var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            console.warn('Speech Recognition API not supported in this browser.');
+            disableVoiceButtons('Voice not supported in this browser');
+            return;
+        }
+
+        try {
+            voiceRecognition = new SpeechRecognition();
+        } catch (e) {
+            console.warn('[Voice] Failed to create SpeechRecognition instance:', e);
+            disableVoiceButtons('Voice input unavailable');
+            return;
+        }
+
+        voiceSupported = true;
+        voiceRecognition.continuous = false;
+        voiceRecognition.interimResults = true;
+        voiceRecognition.lang = 'en-US';
+
+        voiceRecognition.onresult = function(event) {
+            voiceGotResult = true;
+            var interim = '';
+            var final_transcript = '';
+            for (var i = event.resultIndex; i < event.results.length; i++) {
+                if (event.results[i].isFinal) {
+                    final_transcript += event.results[i][0].transcript;
+                } else {
+                    interim += event.results[i][0].transcript;
+                }
+            }
+            // Show interim in chat input
+            var chatInput = document.getElementById('chat-input');
+            if (chatInput && interim) {
+                chatInput.value = interim;
+                chatInput.style.fontStyle = 'italic';
+            }
+            if (final_transcript) {
+                console.log('[Voice] Heard:', final_transcript);
+                if (chatInput) {
+                    chatInput.value = '';
+                    chatInput.style.fontStyle = '';
+                }
+                handleVoiceResult(final_transcript.trim());
+            }
+        };
+
+        voiceRecognition.onerror = function(event) {
+            console.warn('[Voice] Error:', event.error);
+            deactivateVoiceUI();
+            if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                window.toast.error('Microphone access denied. Please allow microphone permission in your browser settings and try again.');
+            } else if (event.error === 'no-speech') {
+                window.toast.info('No speech detected. Click the mic and try again.');
+            } else if (event.error === 'network') {
+                window.toast.error('Voice recognition requires an internet connection. Check your network and try again.');
+            } else if (event.error === 'audio-capture') {
+                window.toast.error('No microphone found. Please connect a microphone and try again.');
+            } else if (event.error === 'aborted') {
+                /* User or code cancelled — no toast needed, cancelVoice handles its own toast */
+            } else {
+                window.toast.error('Voice recognition failed (' + event.error + '). Please try again.');
+            }
+        };
+
+        voiceRecognition.onend = function() {
+            var wasActive = voiceActive;
+            deactivateVoiceUI();
+            /* If recording ended without any result and was not manually cancelled, show fallback */
+            if (wasActive && !voiceGotResult && !voiceCancelled) {
+                window.toast.warning('Could not understand speech. Please try again and speak clearly.');
+            }
+        };
+    }
+
+    function disableVoiceButtons(titleText) {
+        document.querySelectorAll('.voice-btn, .voice-header-btn').forEach(function(b) {
+            b.title = titleText;
+            b.style.opacity = '0.3';
+            b.style.cursor = 'not-allowed';
+            b.setAttribute('aria-disabled', 'true');
+            b.onclick = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (window.toast) {
+                    window.toast.warning('Voice input is not supported in this browser. Try Chrome or Edge.');
+                }
+            };
+        });
+    }
+
+    function toggleVoice() {
+        if (!voiceInitAttempted) {
+            initVoice();
+        }
+        if (!voiceSupported || !voiceRecognition) {
+            if (window.toast) {
+                window.toast.warning('Voice input is not available. Try Chrome or Edge.');
+            }
+            return;
+        }
+        if (voiceActive) {
+            stopVoice();
+        } else {
+            startVoice();
+        }
+    }
+
+    function startVoice() {
+        if (!voiceRecognition || voiceActive) return;
+        voiceGotResult = false;
+        voiceCancelled = false;
+        try {
+            voiceRecognition.start();
+            activateVoiceUI();
+            // Open chat if closed
+            var panel = document.getElementById('chat-panel');
+            if (panel && !panel.classList.contains('open')) toggleChat();
+            window.toast.info('Listening... Speak now.');
+        } catch (e) {
+            console.warn('[Voice] Could not start:', e);
+            deactivateVoiceUI();
+            if (e.message && e.message.indexOf('already started') !== -1) {
+                /* Recognition was already running — stop it first */
+                try { voiceRecognition.stop(); } catch (ignored) {}
+                window.toast.info('Voice input was busy. Please try again.');
+            } else {
+                window.toast.error('Could not start voice input. Please try again.');
+            }
+        }
+    }
+
+    function stopVoice() {
+        if (!voiceRecognition) return;
+        try {
+            voiceRecognition.stop();
+        } catch (e) {
+            console.warn('[Voice] Error stopping:', e);
+        }
+        deactivateVoiceUI();
+    }
+
+    function cancelVoice() {
+        if (!voiceRecognition) return;
+        voiceCancelled = true;
+        try {
+            voiceRecognition.abort();
+        } catch (e) {
+            console.warn('[Voice] Error aborting:', e);
+        }
+        deactivateVoiceUI();
+        var chatInput = document.getElementById('chat-input');
+        if (chatInput) { chatInput.value = ''; chatInput.style.fontStyle = ''; }
+        window.toast.info('Voice input cancelled.');
+    }
+
+    function activateVoiceUI() {
+        voiceActive = true;
+        var chatBtn = document.getElementById('voice-chat-btn');
+        var headerBtn = document.getElementById('voice-header-btn');
+        var indicator = document.getElementById('voice-indicator');
+        var waveform = document.getElementById('voice-waveform');
+        if (chatBtn) { chatBtn.classList.add('voice-active'); chatBtn.title = 'Click to stop recording'; }
+        if (headerBtn) { headerBtn.classList.add('voice-active'); headerBtn.title = 'Click to stop recording'; }
+        if (indicator) indicator.classList.add('active');
+        if (waveform) waveform.classList.add('active');
+        // Show cancel button
+        var cancelBtn = document.getElementById('voice-cancel-btn');
+        if (cancelBtn) cancelBtn.style.display = 'flex';
+    }
+
+    function deactivateVoiceUI() {
+        voiceActive = false;
+        var chatBtn = document.getElementById('voice-chat-btn');
+        var headerBtn = document.getElementById('voice-header-btn');
+        var indicator = document.getElementById('voice-indicator');
+        var waveform = document.getElementById('voice-waveform');
+        if (chatBtn) { chatBtn.classList.remove('voice-active'); chatBtn.title = 'Voice input (press V)'; }
+        if (headerBtn) { headerBtn.classList.remove('voice-active'); headerBtn.title = 'Voice control (press V)'; }
+        if (indicator) indicator.classList.remove('active');
+        if (waveform) waveform.classList.remove('active');
+        var cancelBtn = document.getElementById('voice-cancel-btn');
+        if (cancelBtn) cancelBtn.style.display = 'none';
+        var chatInput = document.getElementById('chat-input');
+        if (chatInput) chatInput.style.fontStyle = '';
+    }
+
+    function handleVoiceResult(transcript) {
+        var handled = processVoiceCommand(transcript);
+        if (!handled) {
+            var chatInput = document.getElementById('chat-input');
+            if (chatInput) {
+                chatInput.value = transcript;
+                sendChat();
+            }
+        }
+    }
+
+    function processVoiceCommand(text) {
+        var lower = text.toLowerCase().trim();
+        var openMatch = lower.match(/^open\s+(.+)$/);
+        if (openMatch) {
+            var page = openMatch[1].trim();
+            var routes = {
+                'dashboard': '/', 'home': '/',
+                'jobs': '/jobs', 'contacts': '/contacts',
+                'outreach': '/outreach', 'analytics': '/analytics',
+                'cv': '/cvs', 'cvs': '/cvs', 'settings': '/settings',
+                'applications': '/applications'
+            };
+            var route = routes[page];
+            if (route) { window.toast.success('Opening ' + page + '...'); window.location.href = route; return true; }
+        }
+        if (lower === 'show drafts' || lower === 'show pending' || lower === 'show pending drafts') {
+            window.location.href = '/outreach?status=draft'; return true;
+        }
+        if (lower === 'approve all' || lower === 'approve all drafts') {
+            window.toast.info('Approving all drafts...');
+            fetch('/outreach/approve-all', { method: 'POST' })
+                .then(function(r) { return r.json(); })
+                .then(function(d) { window.toast.success(d.message || 'All drafts approved.'); })
+                .catch(function() { window.toast.error('Could not approve drafts.'); });
+            return true;
+        }
+        if (lower === 'go back' || lower === 'back') { history.back(); return true; }
+        return false;
+    }
+
+    // Keyboard shortcut: V to toggle voice (outside inputs)
+    document.addEventListener('keydown', function(e) {
+        if ((e.key === 'v' || e.key === 'V') && !e.ctrlKey && !e.metaKey) {
+            var tag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+            var isEditable = document.activeElement && document.activeElement.isContentEditable;
+            if (tag !== 'input' && tag !== 'textarea' && tag !== 'select' && !isEditable) {
+                e.preventDefault();
+                toggleVoice();
+            }
+        }
+        // Escape cancels voice
+        if (e.key === 'Escape' && voiceActive) {
+            cancelVoice();
+        }
+    });
+
+    initVoice();
+    </script>
+</body>
+</html>

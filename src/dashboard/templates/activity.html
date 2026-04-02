@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+{% set active = "activity" %}
+{% block title %}Activity — Outreach Agent{% endblock %}
+
+{% block content %}
+<style>
+/* ── Activity page styles ─────────────────────────────────────── */
+.activity-filter {
+    display: inline-flex;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--bg-secondary);
+    flex-wrap: wrap;
+}
+.activity-filter button {
+    padding: 6px 14px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+}
+.activity-filter button.active {
+    background: var(--bg-surface);
+    color: var(--accent);
+    box-shadow: var(--shadow-sm);
+}
+.activity-filter button:hover:not(.active) {
+    color: var(--text-primary);
+}
+.filter-count {
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 1px 6px;
+    border-radius: 9999px;
+    background: var(--bg-secondary);
+    color: var(--text-muted);
+}
+.activity-filter button.active .filter-count {
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+/* Day group header */
+.day-header {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    padding: 8px 0;
+    background: var(--bg-primary);
+}
+.day-header-inner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+.day-header-inner::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
+/* Activity item */
+.activity-item {
+    display: flex;
+    gap: 14px;
+    padding: 14px 16px;
+    border-radius: var(--radius-lg);
+    transition: all 0.15s;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    animation: fadeInUp 0.3s ease-out both;
+}
+.activity-item:hover {
+    background: var(--bg-secondary);
+}
+.activity-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.activity-icon i {
+    width: 16px;
+    height: 16px;
+}
+.activity-time {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Type colors */
+.type-sent .activity-icon { background: var(--success-soft); }
+.type-sent .activity-icon i { color: var(--success); }
+.type-draft .activity-icon { background: var(--warning-soft); }
+.type-draft .activity-icon i { color: var(--warning); }
+.type-approved .activity-icon { background: var(--info-soft); }
+.type-approved .activity-icon i { color: var(--info); }
+.type-reply .activity-icon { background: var(--accent-soft); }
+.type-reply .activity-icon i { color: var(--accent); }
+.type-job .activity-icon { background: rgba(59, 130, 246, 0.1); }
+.type-job .activity-icon i { color: #3b82f6; }
+.type-cv .activity-icon { background: rgba(124, 58, 237, 0.1); }
+.type-cv .activity-icon i { color: #7c3aed; }
+.type-applied .activity-icon { background: rgba(249, 115, 22, 0.1); }
+.type-applied .activity-icon i { color: #f97316; }
+
+/* Stats summary cards */
+.stat-mini {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 16px;
+    border-radius: var(--radius-lg);
+    background: var(--bg-secondary);
+    min-width: 80px;
+}
+.stat-mini-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.stat-mini-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+</style>
+
+<!-- Header -->
+<div class="flex justify-between items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold" style="color: var(--text-primary);">Activity Timeline</h1>
+        <p class="text-sm mt-1" style="color: var(--text-muted);">{{ total }} events across your pipeline</p>
+    </div>
+    <div class="flex gap-3">
+        <div class="flex gap-2">
+            <div class="stat-mini">
+                <div class="stat-mini-value">{{ type_counts.get('job', 0) }}</div>
+                <div class="stat-mini-label">Jobs</div>
+            </div>
+            <div class="stat-mini">
+                <div class="stat-mini-value">{{ type_counts.get('sent', 0) }}</div>
+                <div class="stat-mini-label">Sent</div>
+            </div>
+            <div class="stat-mini">
+                <div class="stat-mini-value">{{ type_counts.get('reply', 0) }}</div>
+                <div class="stat-mini-label">Replies</div>
+            </div>
+            <div class="stat-mini">
+                <div class="stat-mini-value">{{ type_counts.get('applied', 0) + type_counts.get('cv', 0) }}</div>
+                <div class="stat-mini-label">Applied</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="mb-6">
+    <div class="activity-filter">
+        <button class="{% if not filter_type %}active{% endif %}" onclick="window.location.href='/activity'">
+            <i data-lucide="layers" style="width:12px;height:12px;"></i>
+            All
+            <span class="filter-count">{{ total }}</span>
+        </button>
+        <button class="{% if filter_type == 'job' %}active{% endif %}" onclick="window.location.href='/activity?filter_type=job'">
+            <i data-lucide="briefcase" style="width:12px;height:12px;"></i>
+            Jobs
+            <span class="filter-count">{{ type_counts.get('job', 0) }}</span>
+        </button>
+        <button class="{% if filter_type == 'draft' %}active{% endif %}" onclick="window.location.href='/activity?filter_type=draft'">
+            <i data-lucide="file-edit" style="width:12px;height:12px;"></i>
+            Drafts
+            <span class="filter-count">{{ type_counts.get('draft', 0) }}</span>
+        </button>
+        <button class="{% if filter_type == 'sent' %}active{% endif %}" onclick="window.location.href='/activity?filter_type=sent'">
+            <i data-lucide="send" style="width:12px;height:12px;"></i>
+            Sent
+            <span class="filter-count">{{ type_counts.get('sent', 0) }}</span>
+        </button>
+        <button class="{% if filter_type == 'reply' %}active{% endif %}" onclick="window.location.href='/activity?filter_type=reply'">
+            <i data-lucide="message-circle" style="width:12px;height:12px;"></i>
+            Replies
+            <span class="filter-count">{{ type_counts.get('reply', 0) }}</span>
+        </button>
+        <button class="{% if filter_type == 'applied' %}active{% endif %}" onclick="window.location.href='/activity?filter_type=applied'">
+            <i data-lucide="rocket" style="width:12px;height:12px;"></i>
+            Applied
+            <span class="filter-count">{{ type_counts.get('applied', 0) }}</span>
+        </button>
+        <button class="{% if filter_type == 'cv' %}active{% endif %}" onclick="window.location.href='/activity?filter_type=cv'">
+            <i data-lucide="file-text" style="width:12px;height:12px;"></i>
+            CVs
+            <span class="filter-count">{{ type_counts.get('cv', 0) }}</span>
+        </button>
+    </div>
+</div>
+
+<!-- Timeline -->
+<div class="card" style="overflow:hidden;">
+    {% if day_order %}
+        {% for day in day_order %}
+        <div class="day-header">
+            <div class="day-header-inner px-5">
+                <i data-lucide="calendar" style="width:13px;height:13px;"></i>
+                {{ day }}
+                <span class="filter-count">{{ grouped[day]|length }}</span>
+            </div>
+        </div>
+        {% for act in grouped[day] %}
+        <a href="{{ act.link or '#' }}" class="activity-item type-{{ act.type }}" style="animation-delay: {{ loop.index0 * 30 }}ms;">
+            <div class="activity-icon">
+                <i data-lucide="{{ act.icon or 'circle' }}"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="text-sm font-medium" style="color: var(--text-primary);">{{ act.title }}</div>
+                <div class="text-xs mt-0.5 truncate" style="color: var(--text-muted);">{{ act.desc }}</div>
+            </div>
+            <div class="activity-time">
+                {{ act.time.split(' ')[-1] if act.time and ' ' in act.time else act.time }}
+            </div>
+        </a>
+        {% endfor %}
+        {% endfor %}
+    {% else %}
+        <div class="text-center py-16">
+            <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style="background: var(--bg-secondary);">
+                <i data-lucide="activity" style="width:28px;height:28px;color:var(--text-muted);"></i>
+            </div>
+            <h3 class="text-lg font-semibold mb-1" style="color: var(--text-primary);">No activity yet</h3>
+            <p class="text-sm" style="color: var(--text-muted);">Start by sourcing jobs or importing a CSV to see your timeline.</p>
+            <div class="flex gap-2 justify-center mt-4">
+                <a href="/" class="btn btn-primary">Go to Dashboard</a>
+                <a href="/jobs" class="btn btn-secondary">View Jobs</a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+
+        // Animate stat values
+        document.querySelectorAll('.stat-mini-value').forEach(function(el, idx) {
+            var target = parseInt(el.textContent, 10);
+            if (isNaN(target) || target === 0) return;
+            el.textContent = '0';
+            setTimeout(function() {
+                var start = performance.now();
+                function tick(now) {
+                    var elapsed = now - start;
+                    var progress = Math.min(elapsed / 500, 1);
+                    var eased = 1 - Math.pow(1 - progress, 3);
+                    el.textContent = Math.round(eased * target);
+                    if (progress < 1) requestAnimationFrame(tick);
+                }
+                requestAnimationFrame(tick);
+            }, idx * 80);
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,570 @@
+{% extends "base.html" %}
+{% set active = "jobs" %}
+{% block title %}Jobs — Outreach Agent{% endblock %}
+
+{% block content %}
+<style>
+/* ── Jobs page styles ─────────────────────────────────────────── */
+.view-toggle {
+    display: inline-flex;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--bg-secondary);
+}
+.view-toggle button {
+    padding: 6px 14px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.view-toggle button.active {
+    background: var(--bg-surface);
+    color: var(--accent);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Kanban board */
+.kanban-board {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+}
+.kanban-col {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-xl);
+    padding: 12px;
+    min-height: 200px;
+}
+.kanban-col-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 4px 12px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+}
+.kanban-col-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-transform: capitalize;
+}
+.kanban-col-count {
+    font-size: 0.7rem;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    background: var(--bg-surface);
+    color: var(--text-muted);
+}
+.kanban-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.kanban-card:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+}
+.kanban-card .kc-company {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.kanban-card .kc-role {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+.kanban-card .kc-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-subtle);
+}
+
+/* Slide-out panel */
+.slide-panel-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.3);
+    z-index: 900;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.25s;
+}
+.slide-panel-overlay.open {
+    opacity: 1;
+    visibility: visible;
+}
+.slide-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 520px;
+    max-width: 90vw;
+    height: 100vh;
+    background: var(--bg-surface);
+    border-left: 1px solid var(--border);
+    z-index: 901;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    overflow-y: auto;
+    box-shadow: -8px 0 30px rgba(0,0,0,0.12);
+}
+.slide-panel-overlay.open .slide-panel {
+    transform: translateX(0);
+}
+.slide-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg-surface);
+    z-index: 2;
+}
+.slide-panel-body {
+    padding: 24px;
+}
+</style>
+
+<!-- Header -->
+<div class="flex justify-between items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold" style="color: var(--text-primary);">Job Shortlist</h1>
+        <p class="text-sm mt-1" style="color: var(--text-muted);">{{ jobs|length }} jobs &middot; Avg fit {{ "%.1f"|format(avg_fit) }}/10 &middot; {{ tier1_count }} Tier 1</p>
+    </div>
+    <div class="flex items-center gap-3">
+        <div class="view-toggle">
+            <button id="btn-table-view" class="active" onclick="setView('table')">
+                <i data-lucide="table-2" style="width:14px;height:14px;"></i> Table
+            </button>
+            <button id="btn-kanban-view" onclick="setView('kanban')">
+                <i data-lucide="kanban" style="width:14px;height:14px;"></i> Kanban
+            </button>
+        </div>
+        <div class="flex gap-2 flex-wrap">
+            <a href="/jobs" class="btn {% if not current_status %}btn-primary{% else %}btn-secondary{% endif %}" style="font-size:12px;padding:5px 14px;">All</a>
+            {% for s in statuses %}
+            <a href="/jobs?status={{ s }}" class="btn {% if current_status == s %}btn-primary{% else %}btn-secondary{% endif %}" style="font-size:12px;padding:5px 12px;">{{ s|title }}</a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Search & Filters -->
+<div class="card p-4 mb-5">
+    <div class="flex gap-3 flex-wrap items-center">
+        <div class="flex-1" style="min-width:200px;position:relative;">
+            <i data-lucide="search" style="width:14px;height:14px;position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none;"></i>
+            <input type="text" id="job-search" class="input w-full" placeholder="Search company, role, location..." oninput="filterJobs()" style="padding-left:34px;">
+        </div>
+        <select id="filter-score" class="input" onchange="filterJobs()">
+            <option value="">All Scores</option>
+            <option value="9">9+ Fit</option>
+            <option value="7">7+ Fit</option>
+            <option value="5">5+ Fit</option>
+            <option value="3">3+ Fit</option>
+        </select>
+        <select id="filter-source" class="input" onchange="filterJobs()">
+            <option value="">All Sources</option>
+            <option value="adzuna">Adzuna</option>
+            <option value="linkedin">LinkedIn</option>
+            <option value="manual">Manual</option>
+        </select>
+        <select id="sort-by" class="input" onchange="sortJobs()">
+            <option value="fit-desc">Sort: Fit (High to Low)</option>
+            <option value="fit-asc">Sort: Fit (Low to High)</option>
+            <option value="company-asc">Sort: Company A to Z</option>
+            <option value="date-desc">Sort: Newest First</option>
+        </select>
+    </div>
+</div>
+
+<!-- TABLE VIEW -->
+<div id="table-view">
+    <div class="card overflow-hidden">
+        <table id="jobs-table">
+            <thead>
+                <tr>
+                    <th>Company</th>
+                    <th>Role & Links</th>
+                    <th>Location</th>
+                    <th style="width:60px">Fit</th>
+                    <th>Source</th>
+                    <th>Status</th>
+                    <th style="width:220px">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="jobs-body">
+                {% for job in jobs %}
+                <tr class="job-row" id="job-{{ job.id }}"
+                    data-company="{{ job.company|lower }}"
+                    data-role="{{ job.role|lower }}"
+                    data-location="{{ (job.location or '')|lower }}"
+                    data-score="{{ job.fit_score or 0 }}"
+                    data-source="{{ job.source or '' }}"
+                    data-status="{{ job.status }}"
+                    data-date="{{ job.created_at.isoformat() if job.created_at else '' }}"
+                    onclick="openSlidePanel({{ job.id }})" style="cursor:pointer;">
+                    <td>
+                        <div class="font-semibold" style="color: var(--text-primary);">{{ job.company }}</div>
+                        {% if job.industry %}<div class="text-xs mt-0.5" style="color: var(--text-muted);">{{ job.industry }}</div>{% endif %}
+                        {% if job.is_tier1 %}<span class="badge" style="background:var(--warning-soft);color:var(--warning);border:1px solid color-mix(in srgb, var(--warning) 25%, transparent);font-size:10px;margin-top:3px;">TIER 1</span>{% endif %}
+                    </td>
+                    <td>
+                        <div class="font-medium" style="color: var(--text-secondary);">{{ job.role }}</div>
+                        <div class="flex gap-2 mt-1.5 flex-wrap">
+                            {% if job.application_link %}
+                            <a href="{{ job.application_link }}" target="_blank" class="text-xs flex items-center gap-1" style="color: var(--accent);" onclick="event.stopPropagation();">
+                                <i data-lucide="external-link" style="width:10px;height:10px;"></i> Apply
+                            </a>
+                            {% endif %}
+                            <a href="https://www.linkedin.com/jobs/search/?keywords={{ job.role|urlencode }}%20{{ job.company|urlencode }}&location={{ (job.location or '')|urlencode }}" target="_blank" class="text-xs flex items-center gap-1" style="color: #0a66c2;" onclick="event.stopPropagation();">
+                                <span class="li-icon" style="width:14px;height:14px;border-radius:3px;"><svg width="9" height="9" fill="white" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg></span>
+                                LinkedIn
+                            </a>
+                        </div>
+                    </td>
+                    <td class="text-sm" style="color: var(--text-muted);">{{ job.location or '-' }}</td>
+                    <td>
+                        {% if job.fit_score %}
+                        <div class="inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold font-data"
+                            style="{% if job.fit_score >= 8 %}background: var(--success-soft); color: var(--success); border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
+                            {% elif job.fit_score >= 5 %}background: var(--warning-soft); color: var(--warning); border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+                            {% else %}background: var(--bg-secondary); color: var(--text-muted); border: 1px solid var(--border);{% endif %}">
+                            {{ job.fit_score }}
+                        </div>
+                        {% else %}<span style="color: var(--text-muted);">-</span>{% endif %}
+                    </td>
+                    <td class="text-xs" style="color: var(--text-muted);">{{ job.source or '-' }}</td>
+                    <td><span class="badge badge-{{ job.status }}">{{ job.status }}</span></td>
+                    <td onclick="event.stopPropagation();">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <form method="post" action="/jobs/{{ job.id }}/status" class="inline">
+                                <select name="status" onchange="this.form.submit()" class="input" style="font-size:11px;padding:4px 24px 4px 8px;">
+                                    {% for s in statuses %}
+                                    <option value="{{ s }}" {% if job.status == s %}selected{% endif %}>{{ s }}</option>
+                                    {% endfor %}
+                                </select>
+                            </form>
+                            {% if job.application_link and job.status != 'applied' %}
+                            <form method="post" action="/jobs/{{ job.id }}/apply" class="inline">
+                                <button type="submit" class="btn btn-success" style="font-size:11px;padding:4px 10px;">Apply</button>
+                            </form>
+                            {% endif %}
+                            <button onclick="openSlidePanel({{ job.id }})" class="btn btn-secondary" style="font-size:11px;padding:4px 10px;">
+                                <i data-lucide="panel-right-open" style="width:12px;height:12px;"></i>
+                            </button>
+                            <form method="post" action="/cvs/generate/{{ job.id }}" class="inline">
+                                <button type="submit" class="btn btn-secondary" style="font-size:11px;padding:4px 10px;">CV</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not jobs %}
+                <tr><td colspan="7" class="text-center py-10" style="color: var(--text-muted);">No jobs found</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- KANBAN VIEW (hidden by default) -->
+<div id="kanban-view" style="display:none;">
+    <div class="kanban-board">
+        {% set kanban_statuses = ['shortlisted', 'contacted', 'follow_up', 'applied', 'interviewing', 'offer', 'rejected'] %}
+        {% set status_colors = {
+            'shortlisted': 'var(--accent)',
+            'contacted': 'var(--info)',
+            'follow_up': 'var(--warning)',
+            'applied': '#7c3aed',
+            'interviewing': '#f97316',
+            'offer': 'var(--success)',
+            'rejected': 'var(--danger)'
+        } %}
+        {% for status in kanban_statuses %}
+        {% set status_jobs = jobs | selectattr('status', 'equalto', status) | list %}
+        <div class="kanban-col" data-status="{{ status }}">
+            <div class="kanban-col-header">
+                <div class="flex items-center gap-2">
+                    <div class="w-2.5 h-2.5 rounded-full" style="background: {{ status_colors[status] }};"></div>
+                    <span class="kanban-col-title">{{ status|replace('_',' ')|title }}</span>
+                </div>
+                <span class="kanban-col-count">{{ status_jobs|length }}</span>
+            </div>
+            <div class="kanban-cards" data-status="{{ status }}">
+                {% for job in status_jobs %}
+                <div class="kanban-card" onclick="openSlidePanel({{ job.id }})">
+                    <div class="kc-company">{{ job.company }}</div>
+                    <div class="kc-role">{{ job.role }}</div>
+                    <div class="kc-footer">
+                        <span class="text-xs" style="color: var(--text-muted);">{{ job.location or '' }}</span>
+                        {% if job.fit_score %}
+                        <div class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold font-data"
+                            style="{% if job.fit_score >= 8 %}background: var(--success-soft); color: var(--success);
+                            {% elif job.fit_score >= 5 %}background: var(--warning-soft); color: var(--warning);
+                            {% else %}background: var(--bg-secondary); color: var(--text-muted);{% endif %}">
+                            {{ job.fit_score }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                {% if not status_jobs %}
+                <div class="text-center py-6 text-xs" style="color: var(--text-muted);">No jobs</div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="text-sm mt-3" style="color: var(--text-muted);" id="jobs-count">{{ jobs|length }} jobs</div>
+
+<!-- Slide-out Detail Panel -->
+<div class="slide-panel-overlay" id="slide-overlay" onclick="closeSlidePanel()">
+    <div class="slide-panel" onclick="event.stopPropagation()">
+        <div class="slide-panel-header">
+            <div>
+                <h3 class="font-bold text-lg" style="color: var(--text-primary);" id="sp-title">-</h3>
+                <p class="text-sm" style="color: var(--text-muted);" id="sp-subtitle">-</p>
+            </div>
+            <button onclick="closeSlidePanel()" class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: var(--bg-secondary); color: var(--text-muted);"
+                    onmouseover="this.style.background='var(--danger-soft)';this.style.color='var(--danger)'" onmouseout="this.style.background='var(--bg-secondary)';this.style.color='var(--text-muted)'">
+                <i data-lucide="x" style="width:16px;height:16px;"></i>
+            </button>
+        </div>
+        <div class="slide-panel-body" id="sp-body">
+            <div class="skeleton-text" style="width:60%;"></div>
+            <div class="skeleton-text" style="width:80%;margin-top:12px;"></div>
+            <div class="skeleton-text" style="width:70%;margin-top:12px;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── View Toggle ──────────────────────────────────────────────────
+function setView(view) {
+    const tableView = document.getElementById('table-view');
+    const kanbanView = document.getElementById('kanban-view');
+    const btnTable = document.getElementById('btn-table-view');
+    const btnKanban = document.getElementById('btn-kanban-view');
+
+    if (view === 'kanban') {
+        tableView.style.display = 'none';
+        kanbanView.style.display = '';
+        btnTable.classList.remove('active');
+        btnKanban.classList.add('active');
+    } else {
+        tableView.style.display = '';
+        kanbanView.style.display = 'none';
+        btnTable.classList.add('active');
+        btnKanban.classList.remove('active');
+    }
+    localStorage.setItem('jobs-view', view);
+}
+
+// Restore saved view
+(function() {
+    const saved = localStorage.getItem('jobs-view');
+    if (saved === 'kanban') setView('kanban');
+})();
+
+// ── Slide-out Panel ──────────────────────────────────────────────
+const jobData = {
+    {% for job in jobs %}
+    {{ job.id }}: {
+        company: {{ job.company | tojson }},
+        role: {{ job.role | tojson }},
+        location: {{ (job.location or '-') | tojson }},
+        industry: {{ (job.industry or '') | tojson }},
+        fit_score: {{ job.fit_score or 0 }},
+        status: {{ job.status | tojson }},
+        source: {{ (job.source or '-') | tojson }},
+        is_tier1: {{ 'true' if job.is_tier1 else 'false' }},
+        description: {{ (job.description or 'No description available.') | tojson }},
+        keywords: {{ job.keywords_list | tojson if job.keywords_list else '[]' }},
+        application_link: {{ (job.application_link or '') | tojson }},
+    },
+    {% endfor %}
+};
+
+function openSlidePanel(jobId) {
+    const job = jobData[jobId];
+    if (!job) return;
+
+    document.getElementById('sp-title').textContent = job.company;
+    document.getElementById('sp-subtitle').textContent = job.role;
+
+    const scoreStyle = job.fit_score >= 8
+        ? 'background:var(--success-soft);color:var(--success);border:1px solid color-mix(in srgb, var(--success) 30%, transparent);'
+        : job.fit_score >= 5
+        ? 'background:var(--warning-soft);color:var(--warning);border:1px solid color-mix(in srgb, var(--warning) 30%, transparent);'
+        : 'background:var(--bg-secondary);color:var(--text-muted);border:1px solid var(--border);';
+
+    let html = `
+    <div class="flex flex-wrap gap-3 mb-6">
+        <div class="inline-flex items-center justify-center w-12 h-12 rounded-xl text-lg font-bold font-data" style="${scoreStyle}">
+            ${job.fit_score || '?'}
+        </div>
+        <div>
+            <div class="text-sm" style="color: var(--text-muted);">Fit Score</div>
+            <div class="text-sm font-semibold" style="color: var(--text-primary);">${job.fit_score}/10</div>
+        </div>
+        <div class="ml-4">
+            <div class="text-sm" style="color: var(--text-muted);">Location</div>
+            <div class="text-sm font-semibold" style="color: var(--text-primary);">${job.location}</div>
+        </div>
+        <div class="ml-4">
+            <div class="text-sm" style="color: var(--text-muted);">Source</div>
+            <div class="text-sm font-semibold" style="color: var(--text-primary);">${job.source}</div>
+        </div>
+    </div>
+
+    <div class="flex items-center gap-2 mb-6">
+        <span class="badge badge-${job.status}">${job.status}</span>
+        ${job.is_tier1 ? '<span class="badge" style="background:var(--warning-soft);color:var(--warning);border:1px solid color-mix(in srgb, var(--warning) 25%, transparent);">TIER 1</span>' : ''}
+        ${job.industry ? '<span class="text-xs" style="color:var(--text-muted);">' + job.industry + '</span>' : ''}
+    </div>
+
+    <div class="flex gap-2 mb-6">
+        ${job.application_link ? '<a href="' + job.application_link + '" target="_blank" class="btn btn-primary" style="font-size:12px;padding:6px 16px;"><i data-lucide="external-link" style="width:12px;height:12px;display:inline;vertical-align:-2px;margin-right:4px;"></i>Apply Now</a>' : ''}
+        <a href="https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(job.role + ' ' + job.company)}" target="_blank" class="btn btn-secondary" style="font-size:12px;padding:6px 16px;">Find on LinkedIn</a>
+        <form method="post" action="/cvs/generate/${jobId}" class="inline">
+            <button type="submit" class="btn btn-secondary" style="font-size:12px;padding:6px 16px;"><i data-lucide="file-text" style="width:12px;height:12px;display:inline;vertical-align:-2px;margin-right:4px;"></i>Generate CV</button>
+        </form>
+    </div>`;
+
+    if (job.keywords.length > 0) {
+        html += '<div class="mb-6"><div class="text-xs font-semibold uppercase tracking-wide mb-2" style="color:var(--text-muted);">Keywords</div><div class="flex flex-wrap gap-1.5">';
+        job.keywords.slice(0, 15).forEach(kw => {
+            html += '<span class="badge badge-approved" style="font-size:10px;">' + kw + '</span>';
+        });
+        html += '</div></div>';
+    }
+
+    html += `
+    <div>
+        <div class="text-xs font-semibold uppercase tracking-wide mb-2" style="color:var(--text-muted);">Job Description</div>
+        <div class="text-sm leading-relaxed whitespace-pre-wrap" style="color:var(--text-secondary);max-height:400px;overflow-y:auto;padding:16px;border-radius:var(--radius-lg);background:var(--bg-secondary);">
+            ${job.description}
+        </div>
+    </div>`;
+
+    document.getElementById('sp-body').innerHTML = html;
+    document.getElementById('slide-overlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    // Re-init Lucide icons in new content
+    if (window.lucide) lucide.createIcons();
+}
+
+function closeSlidePanel() {
+    document.getElementById('slide-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+}
+
+// Close on Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeSlidePanel();
+});
+
+// ── Filter & Sort ────────────────────────────────────────────────
+function filterJobs() {
+    const q = document.getElementById('job-search').value.toLowerCase();
+    const minScore = parseInt(document.getElementById('filter-score').value) || 0;
+    const source = document.getElementById('filter-source').value;
+    let visible = 0;
+    document.querySelectorAll('.job-row').forEach(row => {
+        const d = row.dataset;
+        const matchSearch = !q || d.company.includes(q) || d.role.includes(q) || d.location.includes(q);
+        const matchScore = (parseInt(d.score) || 0) >= minScore;
+        const matchSource = !source || d.source === source;
+        const show = matchSearch && matchScore && matchSource;
+        row.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+    document.getElementById('jobs-count').textContent = visible + ' jobs';
+}
+
+function sortJobs() {
+    const val = document.getElementById('sort-by').value;
+    const tbody = document.getElementById('jobs-body');
+    const rows = Array.from(tbody.querySelectorAll('.job-row'));
+    rows.sort((a, b) => {
+        if (val === 'fit-desc') return (parseInt(b.dataset.score)||0) - (parseInt(a.dataset.score)||0);
+        if (val === 'fit-asc') return (parseInt(a.dataset.score)||0) - (parseInt(b.dataset.score)||0);
+        if (val === 'company-asc') return a.dataset.company.localeCompare(b.dataset.company);
+        if (val === 'date-desc') return (b.dataset.date||'').localeCompare(a.dataset.date||'');
+        return 0;
+    });
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+// Initialize Lucide
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.lucide) lucide.createIcons();
+
+    // Init SortableJS on kanban columns
+    if (typeof Sortable !== 'undefined') {
+        document.querySelectorAll('.kanban-cards').forEach(col => {
+            new Sortable(col, {
+                group: 'kanban',
+                animation: 150,
+                ghostClass: 'opacity-30',
+                onEnd: function(evt) {
+                    const newStatus = evt.to.dataset.status;
+                    const cardEl = evt.item;
+                    const jobId = cardEl.dataset.id;
+                    // Update column counts
+                    document.querySelectorAll('.kanban-col').forEach(c => {
+                        const cards = c.querySelectorAll('.kanban-card');
+                        c.querySelector('.kanban-col-count').textContent = cards.length;
+                    });
+                    // Persist status change via API
+                    if (jobId && newStatus) {
+                        fetch('/api/jobs/' + jobId + '/status', {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ status: newStatus }),
+                        }).then(function(r) { return r.json(); })
+                          .then(function(d) {
+                              if (d.status === 'ok' && window.toast) {
+                                  window.toast.success('Moved to ' + newStatus);
+                              } else if (d.error && window.toast) {
+                                  window.toast.error(d.error);
+                              }
+                          }).catch(function() {
+                              if (window.toast) window.toast.error('Failed to update status');
+                          });
+                    }
+                }
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

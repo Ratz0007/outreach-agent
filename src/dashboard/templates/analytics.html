@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% set active = "analytics" %}
+{% block title %}Analytics — Outreach Agent{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold" style="color: var(--text-primary);">A/B Test Analytics</h1>
+    <p class="text-sm mt-1" style="color: var(--text-muted);">Track variant performance and optimise your outreach</p>
+</div>
+
+<!-- Summary KPIs -->
+<div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+    <div class="card p-5 text-center transition-all">
+        <div class="text-3xl font-bold font-data" style="color: var(--accent);">{{ recommendations.total_sends }}</div>
+        <div class="kpi-label">Total Sends</div>
+    </div>
+    <div class="card p-5 text-center transition-all">
+        <div class="text-3xl font-bold font-data" style="color: #7c3aed;">{{ recommendations.total_replies }}</div>
+        <div class="kpi-label">Total Replies</div>
+    </div>
+    <div class="card p-5 text-center transition-all">
+        <div class="text-3xl font-bold font-data" style="color: var(--success);">{{ recommendations.active_count }}</div>
+        <div class="kpi-label">Active Variants</div>
+    </div>
+    <div class="card p-5 text-center transition-all">
+        <div class="text-3xl font-bold font-data" style="color: var(--warning);">{{ response_summary.referrals }}</div>
+        <div class="kpi-label">Referrals</div>
+    </div>
+    <div class="card p-5 text-center transition-all">
+        <div class="text-3xl font-bold font-data" style="color: var(--info);">{{ response_summary.total_responses }}</div>
+        <div class="kpi-label">Responses</div>
+    </div>
+</div>
+
+{% if not recommendations.can_evaluate %}
+<div class="card p-4 mb-6" style="border-left: 3px solid var(--warning);">
+    <span class="font-semibold" style="color: var(--warning);">
+        <i data-lucide="alert-triangle" style="width:14px;height:14px;display:inline;vertical-align:-2px;"></i>
+        Not enough data yet.
+    </span>
+    <span style="color: var(--text-muted);"> Need {{ 30 - recommendations.total_replies }} more replies before statistical evaluation.</span>
+</div>
+{% endif %}
+
+<!-- Variant Performance Table -->
+<div class="card overflow-hidden mb-8">
+    <div class="p-5" style="border-bottom: 1px solid var(--border);">
+        <h2 class="font-semibold" style="color: var(--text-primary);">Variant Performance</h2>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Variant</th>
+                <th>Style</th>
+                <th>Sends</th>
+                <th>Replies</th>
+                <th>Reply Rate</th>
+                <th>Referrals</th>
+                <th>Ref Rate</th>
+                <th>Weight</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in variant_stats %}
+            <tr>
+                <td class="font-semibold" style="color: #7c3aed;">{{ s.variant_id }}</td>
+                <td>
+                    <span class="badge {% if s.style == 'referral' %}badge-shortlisted{% elif s.style == 'value_first' %}badge-sent{% else %}badge-applied{% endif %}">
+                        {{ s.style|replace('_',' ')|title }}
+                    </span>
+                </td>
+                <td class="font-medium font-data">{{ s.sends }}</td>
+                <td class="font-medium font-data">{{ s.replies }}</td>
+                <td>
+                    <div class="flex items-center gap-2">
+                        <div class="w-16 rounded-full h-2" style="background: var(--bg-secondary);">
+                            <div class="h-2 rounded-full"
+                                 style="width: {{ [s.reply_rate, 100]|min }}%;
+                                        background: {% if s.reply_rate >= 20 %}var(--success){% elif s.reply_rate >= 10 %}var(--warning){% else %}var(--border){% endif %};"></div>
+                        </div>
+                        <span class="text-sm font-semibold font-data"
+                              style="color: {% if s.reply_rate >= 20 %}var(--success){% elif s.reply_rate >= 10 %}var(--warning){% elif s.sends > 0 %}var(--danger){% else %}var(--text-muted){% endif %};">
+                            {{ s.reply_rate }}%
+                        </span>
+                    </div>
+                </td>
+                <td class="font-data">{{ s.referrals }}</td>
+                <td class="font-data">{{ s.referral_rate }}%</td>
+                <td class="font-data" style="color: var(--text-muted);">{{ "%.2f"|format(s.weight) }}</td>
+                <td>
+                    {% if s.variant_id in recommendations.kill %}
+                        <span class="badge badge-rejected">KILL</span>
+                    {% elif s.variant_id in recommendations.boost %}
+                        <span class="badge badge-offer">BOOST</span>
+                    {% elif s.active %}
+                        <span class="badge badge-sent">Active</span>
+                    {% else %}
+                        <span class="badge badge-no_reply">Retired</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Visual Bar Chart -->
+<div class="card p-6 mb-8">
+    <h2 class="font-semibold mb-5" style="color: var(--text-primary);">Reply Rate by Variant</h2>
+    <div class="space-y-3">
+        {% for s in variant_stats %}
+        <div class="flex items-center gap-3">
+            <div class="w-12 text-sm font-semibold" style="color: #7c3aed;">{{ s.variant_id }}</div>
+            <div class="flex-1 rounded-lg h-7 relative overflow-hidden" style="background: var(--bg-secondary);">
+                <div class="h-7 rounded-lg transition-all"
+                     style="width: {{ [s.reply_rate, 100]|min }}%; min-width: {% if s.sends > 0 %}6px{% else %}0{% endif %};
+                            background: {% if s.reply_rate >= 20 %}var(--success){% elif s.reply_rate >= 10 %}var(--warning){% else %}var(--border){% endif %};"></div>
+                <span class="absolute right-3 top-1 text-xs font-medium font-data" style="color: var(--text-secondary);">{{ s.reply_rate }}% (n={{ s.sends }})</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Response Funnel -->
+<div class="card p-6">
+    <h2 class="font-semibold mb-5" style="color: var(--text-primary);">Response Breakdown</h2>
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+        {% set response_items = [
+            ('Total', response_summary.total_responses, 'var(--info)'),
+            ('Referrals', response_summary.referrals, 'var(--success)'),
+            ('Interest', response_summary.interest, '#7c3aed'),
+            ('No Reply', response_summary.no_reply, 'var(--warning)'),
+            ('Declined', response_summary.declined, 'var(--danger)'),
+        ] %}
+        {% for label, value, color in response_items %}
+        <div class="text-center">
+            <div class="text-2xl font-bold font-data" style="color: {{ color }};">{{ value }}</div>
+            <div class="text-xs mt-1" style="color: var(--text-muted);">{{ label }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.lucide) lucide.createIcons();
+});
+</script>
+{% endblock %}

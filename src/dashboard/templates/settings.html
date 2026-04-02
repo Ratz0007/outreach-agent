@@ -1,0 +1,1303 @@
+{% extends "base.html" %}
+{% set active = "settings" %}
+{% block title %}Settings — Outreach Agent{% endblock %}
+
+{% block content %}
+<style>
+/* Toggle switch */
+.toggle-switch {
+    position: relative;
+    display: inline-flex;
+    width: 40px;
+    height: 22px;
+    flex-shrink: 0;
+}
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: var(--border);
+    border-radius: 22px;
+    transition: 0.3s;
+}
+.toggle-slider:before {
+    content: "";
+    position: absolute;
+    height: 16px;
+    width: 16px;
+    left: 3px;
+    bottom: 3px;
+    background: white;
+    border-radius: 50%;
+    transition: 0.3s;
+}
+.toggle-switch input:checked + .toggle-slider {
+    background: var(--accent);
+}
+.toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(18px);
+}
+
+/* Settings tabs */
+.settings-tabs {
+    display: flex;
+    gap: 2px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+    overflow-x: auto;
+}
+.settings-tab {
+    padding: 10px 18px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.settings-tab:hover {
+    color: var(--text-secondary);
+}
+.settings-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+.settings-panel {
+    display: none;
+}
+.settings-panel.active {
+    display: block;
+}
+
+/* Tags input */
+.tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 12px;
+    min-height: 44px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--bg-surface);
+    cursor: text;
+    transition: border-color 0.15s;
+}
+.tags-container:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.tags-container .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+.tags-container .tag .tag-remove {
+    cursor: pointer;
+    opacity: 0.6;
+    font-size: 14px;
+    line-height: 1;
+}
+.tags-container .tag .tag-remove:hover { opacity: 1; }
+.tags-container input {
+    border: none;
+    outline: none;
+    background: transparent;
+    flex: 1;
+    min-width: 80px;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+}
+
+/* Chip multi-select */
+.chip-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.chip {
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    border: 1px solid var(--border);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+}
+.chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+.chip.selected {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+/* Char counter */
+.char-counter {
+    font-size: 0.7rem;
+    text-align: right;
+    margin-top: 4px;
+    color: var(--text-muted);
+}
+.char-counter.over { color: var(--danger); }
+
+/* API key field */
+.api-field {
+    position: relative;
+}
+.api-field .status-dot {
+    position: absolute;
+    right: 80px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+}
+.api-field .status-dot.green { background: var(--success); }
+.api-field .status-dot.red { background: var(--danger); }
+.api-field .status-dot.gray { background: var(--border); }
+</style>
+
+<div class="mb-6">
+    <h1 class="text-2xl font-bold" style="color: var(--text-primary);">Settings</h1>
+    <p class="text-sm mt-1" style="color: var(--text-muted);">Configure your profile, API keys, search preferences, and outreach limits</p>
+</div>
+
+{% if success %}
+<div class="card p-4 mb-6 flex items-center gap-2" style="border-left: 3px solid var(--success); color: var(--success);">
+    <i data-lucide="check-circle" style="width:16px;height:16px;"></i>
+    <span class="text-sm font-medium">Settings saved successfully!</span>
+</div>
+{% endif %}
+
+<!-- Not logged in banner -->
+<div id="guest-banner" class="card p-4 mb-6 flex items-center gap-3 hidden" style="border-left: 3px solid var(--warning); background: var(--warning-soft);">
+    <i data-lucide="info" style="width:16px;height:16px;color:var(--warning);"></i>
+    <span class="text-sm" style="color: var(--text-primary);">Settings are saved to your browser's local storage. <a href="/login" class="font-semibold" style="color:var(--accent);">Sign in</a> to sync across devices.</span>
+</div>
+
+<!-- Tabs -->
+<div class="settings-tabs">
+    <button class="settings-tab active" onclick="switchTab('profile')" data-tab="profile">
+        <i data-lucide="user" style="width:14px;height:14px;"></i> Profile
+    </button>
+    <button class="settings-tab" onclick="switchTab('api-keys')" data-tab="api-keys">
+        <i data-lucide="key" style="width:14px;height:14px;"></i> API Keys
+    </button>
+    <button class="settings-tab" onclick="switchTab('search')" data-tab="search">
+        <i data-lucide="search" style="width:14px;height:14px;"></i> Search
+    </button>
+    <button class="settings-tab" onclick="switchTab('limits')" data-tab="limits">
+        <i data-lucide="timer" style="width:14px;height:14px;"></i> Limits
+    </button>
+    <button class="settings-tab" onclick="switchTab('ab-testing')" data-tab="ab-testing">
+        <i data-lucide="flask-conical" style="width:14px;height:14px;"></i> A/B Testing
+    </button>
+    <button class="settings-tab" onclick="switchTab('tier1')" data-tab="tier1">
+        <i data-lucide="shield-alert" style="width:14px;height:14px;"></i> Tier 1
+    </button>
+    <button class="settings-tab" onclick="switchTab('connectors')" data-tab="connectors">
+        <i data-lucide="plug" style="width:14px;height:14px;"></i> Connectors
+    </button>
+    <button class="settings-tab" onclick="switchTab('notifications')" data-tab="notifications">
+        <i data-lucide="bell" style="width:14px;height:14px;"></i> Notifications
+    </button>
+    <button class="settings-tab" onclick="switchTab('voice')" data-tab="voice">
+        <i data-lucide="mic" style="width:14px;height:14px;"></i> Voice
+    </button>
+    <button class="settings-tab" onclick="switchTab('data')" data-tab="data">
+        <i data-lucide="database" style="width:14px;height:14px;"></i> Data & Memory
+    </button>
+</div>
+
+<form id="settings-form" method="post" action="/settings" onsubmit="return handleSettingsSave(event)">
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- PROFILE TAB                                 -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="settings-panel active" id="panel-profile">
+        <div class="card p-6 mb-6">
+            <div class="flex items-center gap-3 mb-5">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background: var(--accent-soft);">
+                    <i data-lucide="user" style="width:18px;height:18px;color:var(--accent);"></i>
+                </div>
+                <div>
+                    <h2 class="font-semibold" style="color: var(--text-primary);">Personal Info</h2>
+                    <p class="text-xs" style="color: var(--text-muted);">Used in outreach messages and CV tailoring</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">Full Name</label>
+                    <input type="text" name="full_name" id="f_full_name" class="input w-full" value="{{ s.full_name or '' }}" placeholder="Your full name">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">Email</label>
+                    <input type="email" name="profile_email" id="f_profile_email" class="input w-full" value="{{ s.profile_email or '' }}" placeholder="you@example.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">Phone</label>
+                    <input type="tel" name="phone" id="f_phone" class="input w-full" value="{{ s.phone or '' }}" placeholder="+353 XX XXX XXXX">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">Location (City, Country)</label>
+                    <input type="text" name="location" id="f_location" class="input w-full" value="{{ s.location or '' }}" placeholder="e.g. Dublin, Ireland">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">LinkedIn Profile URL</label>
+                    <input type="url" name="linkedin_url" id="f_linkedin_url" class="input w-full" value="{{ s.linkedin_url or '' }}" placeholder="https://linkedin.com/in/yourprofile">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">Portfolio / Website URL</label>
+                    <input type="url" name="portfolio_url" id="f_portfolio_url" class="input w-full" value="{{ s.portfolio_url or '' }}" placeholder="https://yoursite.com">
+                </div>
+            </div>
+        </div>
+
+        <div class="card p-6 mb-6">
+            <div class="flex items-center gap-3 mb-5">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background: rgba(124,58,237,0.1);">
+                    <i data-lucide="briefcase" style="width:18px;height:18px;color:#7c3aed;"></i>
+                </div>
+                <div>
+                    <h2 class="font-semibold" style="color: var(--text-primary);">Professional Profile</h2>
+                    <p class="text-xs" style="color: var(--text-muted);">Helps AI personalise your outreach and CV</p>
+                </div>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">Professional Headline</label>
+                    <input type="text" name="headline" id="f_headline" class="input w-full" value="{{ s.headline or '' }}" placeholder="e.g. Senior Account Executive | SMB & Startup SaaS">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">Years of Experience</label>
+                        <input type="number" name="years_experience" id="f_years_experience" class="input w-full" value="{{ s.years_experience or '' }}" placeholder="7" min="0" max="50">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">Min Salary (EUR)</label>
+                        <input type="number" name="salary_min" id="f_salary_min" class="input w-full" value="{{ s.salary_min or '' }}" placeholder="60000" step="1000">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">Max Salary (EUR)</label>
+                        <input type="number" name="salary_max" id="f_salary_max" class="input w-full" value="{{ s.salary_max or '' }}" placeholder="90000" step="1000">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1.5" style="color: var(--text-secondary);">
+                        Desired Job Titles <span class="text-xs" style="color:var(--text-muted);">Press Enter to add</span>
+                    </label>
+                    <div class="tags-container" id="tags-titles" onclick="this.querySelector('input').focus()">
+                        <input type="text" placeholder="e.g. Account Executive" onkeydown="handleTagKey(event, 'titles')">
+                    </div>
+                    <input type="hidden" name="desired_titles" id="f_desired_titles" value="{{ s.desired_titles or '' }}">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1.5" style="color: var(--text-secondary);">
+                        Desired Locations <span class="text-xs" style="color:var(--text-muted);">Press Enter to add</span>
+                    </label>
+                    <div class="tags-container" id="tags-locations" onclick="this.querySelector('input').focus()">
+                        <input type="text" placeholder="e.g. Dublin, Remote" onkeydown="handleTagKey(event, 'locations')">
+                    </div>
+                    <input type="hidden" name="desired_locations" id="f_desired_locations" value="{{ s.desired_locations or '' }}">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1.5" style="color: var(--text-secondary);">Industries of Interest</label>
+                    <div class="chip-grid" id="industry-chips">
+                        <!-- populated by JS -->
+                    </div>
+                    <input type="hidden" name="industries" id="f_industries" value="{{ s.industries or '' }}">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">
+                        About Me <span class="text-xs" style="color:var(--text-muted);">(500 chars max)</span>
+                    </label>
+                    <textarea name="about_me" id="f_about_me" rows="4" maxlength="500" class="input w-full" oninput="updateCharCount(this, 500)"
+                              placeholder="Brief summary of your experience and what you're looking for...">{{ s.about_me or '' }}</textarea>
+                    <div class="char-counter" id="about-counter">0/500</div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1.5" style="color: var(--text-secondary);">
+                        Skills <span class="text-xs" style="color:var(--text-muted);">Press Enter to add</span>
+                    </label>
+                    <div class="tags-container" id="tags-skills" onclick="this.querySelector('input').focus()">
+                        <input type="text" placeholder="e.g. MEDDIC, Salesforce, Cold Calling" onkeydown="handleTagKey(event, 'skills')">
+                    </div>
+                    <input type="hidden" name="skills" id="f_skills" value="{{ s.skills or '' }}">
+                </div>
+            </div>
+        </div>
+
+        <div class="card p-6 mb-6">
+            <div class="flex items-center gap-3 mb-5">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background: var(--success-soft);">
+                    <i data-lucide="file-text" style="width:18px;height:18px;color:var(--success);"></i>
+                </div>
+                <div>
+                    <h2 class="font-semibold" style="color: var(--text-primary);">CV / Resume Text</h2>
+                    <p class="text-xs" style="color: var(--text-muted);">Paste your CV text — used for AI-powered CV tailoring per role</p>
+                </div>
+            </div>
+            <textarea name="cv_text" id="f_cv_text" rows="10" class="input w-full font-mono text-xs" style="line-height:1.6;"
+                      placeholder="Paste your full CV/resume text here...&#10;&#10;RATIN SHARMA&#10;Senior Account Executive | Dublin, Ireland&#10;...">{{ s.cv_text or '' }}</textarea>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- API KEYS TAB                                -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="settings-panel" id="panel-api-keys">
+        <div class="card p-6 mb-6">
+            <div class="flex items-center gap-3 mb-5">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background: var(--warning-soft);">
+                    <i data-lucide="key" style="width:18px;height:18px;color:var(--warning);"></i>
+                </div>
+                <div>
+                    <h2 class="font-semibold" style="color: var(--text-primary);">API Keys</h2>
+                    <p class="text-xs" style="color: var(--text-muted);">Connect your services — keys stored locally, never shared</p>
+                </div>
+            </div>
+            <div class="space-y-5">
+                <!-- Anthropic -->
+                <div class="api-key-row" data-service="anthropic">
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">
+                        Anthropic (Claude AI)
+                        <span class="text-xs ml-1" style="color: var(--text-muted);">Powers Sage chat, message generation, CV tailoring</span>
+                    </label>
+                    <div class="flex gap-2">
+                        <div class="relative flex-1">
+                            <input type="password" name="anthropic_api_key" id="f_anthropic_api_key" class="input w-full font-mono text-xs pr-14" value="{{ s.anthropic_api_key or '' }}" placeholder="sk-ant-...">
+                            <button type="button" onclick="toggleVis(this)" class="absolute right-2 top-1/2 -translate-y-1/2 text-xs cursor-pointer" style="color:var(--text-muted);">Show</button>
+                        </div>
+                        <button type="button" onclick="testApiKey('anthropic')" class="btn btn-secondary text-xs px-3 flex items-center gap-1" id="test-anthropic">
+                            <i data-lucide="zap" style="width:12px;height:12px;"></i> Test
+                        </button>
+                        <span class="flex items-center" id="status-anthropic"><span class="w-2 h-2 rounded-full" style="background:var(--border);"></span></span>
+                    </div>
+                </div>
+
+                <!-- Gemini -->
+                <div class="api-key-row" data-service="gemini">
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">
+                        Google Gemini
+                        <span class="text-xs ml-1" style="color: var(--text-muted);">Alternative AI for chat & analysis</span>
+                    </label>
+                    <div class="flex gap-2">
+                        <div class="relative flex-1">
+                            <input type="password" name="gemini_api_key" id="f_gemini_api_key" class="input w-full font-mono text-xs pr-14" value="{{ s.gemini_api_key or '' }}" placeholder="AIza...">
+                            <button type="button" onclick="toggleVis(this)" class="absolute right-2 top-1/2 -translate-y-1/2 text-xs cursor-pointer" style="color:var(--text-muted);">Show</button>
+                        </div>
+                        <button type="button" onclick="testApiKey('gemini')" class="btn btn-secondary text-xs px-3 flex items-center gap-1" id="test-gemini">
+                            <i data-lucide="zap" style="width:12px;height:12px;"></i> Test
+                        </button>
+                        <span class="flex items-center" id="status-gemini"><span class="w-2 h-2 rounded-full" style="background:var(--border);"></span></span>
+                    </div>
+                </div>
+
+                <!-- Adzuna -->
+                <div class="api-key-row" data-service="adzuna">
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">
+                        Adzuna <span class="text-xs ml-1" style="color: var(--text-muted);">Job sourcing API</span>
+                    </label>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <div class="relative">
+                            <input type="text" name="adzuna_app_id" id="f_adzuna_app_id" class="input w-full font-mono text-xs" value="{{ s.adzuna_app_id or '' }}" placeholder="App ID">
+                        </div>
+                        <div class="flex gap-2">
+                            <div class="relative flex-1">
+                                <input type="password" name="adzuna_app_key" id="f_adzuna_app_key" class="input w-full font-mono text-xs pr-14" value="{{ s.adzuna_app_key or '' }}" placeholder="App Key">
+                                <button type="button" onclick="toggleVis(this)" class="absolute right-2 top-1/2 -translate-y-1/2 text-xs cursor-pointer" style="color:var(--text-muted);">Show</button>
+                            </div>
+                            <button type="button" onclick="testApiKey('adzuna')" class="btn btn-secondary text-xs px-3 flex items-center gap-1" id="test-adzuna">
+                                <i data-lucide="zap" style="width:12px;height:12px;"></i> Test
+                            </button>
+                            <span class="flex items-center" id="status-adzuna"><span class="w-2 h-2 rounded-full" style="background:var(--border);"></span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Apollo -->
+                <div class="api-key-row" data-service="apollo">
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">
+                        Apollo.io <span class="text-xs ml-1" style="color: var(--text-muted);">Contact enrichment</span>
+                    </label>
+                    <div class="flex gap-2">
+                        <div class="relative flex-1">
+                            <input type="password" name="apollo_api_key" id="f_apollo_api_key" class="input w-full font-mono text-xs pr-14" value="{{ s.apollo_api_key or '' }}" placeholder="Apollo API key">
+                            <button type="button" onclick="toggleVis(this)" class="absolute right-2 top-1/2 -translate-y-1/2 text-xs cursor-pointer" style="color:var(--text-muted);">Show</button>
+                        </div>
+                        <button type="button" onclick="testApiKey('apollo')" class="btn btn-secondary text-xs px-3 flex items-center gap-1" id="test-apollo">
+                            <i data-lucide="zap" style="width:12px;height:12px;"></i> Test
+                        </button>
+                        <span class="flex items-center" id="status-apollo"><span class="w-2 h-2 rounded-full" style="background:var(--border);"></span></span>
+                    </div>
+                </div>
+
+                <!-- Hunter -->
+                <div class="api-key-row" data-service="hunter">
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">
+                        Hunter.io <span class="text-xs ml-1" style="color: var(--text-muted);">Email finder (50 free/month)</span>
+                    </label>
+                    <div class="flex gap-2">
+                        <div class="relative flex-1">
+                            <input type="password" name="hunter_api_key" id="f_hunter_api_key" class="input w-full font-mono text-xs pr-14" value="{{ s.hunter_api_key or '' }}" placeholder="Hunter.io API key">
+                            <button type="button" onclick="toggleVis(this)" class="absolute right-2 top-1/2 -translate-y-1/2 text-xs cursor-pointer" style="color:var(--text-muted);">Show</button>
+                        </div>
+                        <button type="button" onclick="testApiKey('hunter')" class="btn btn-secondary text-xs px-3 flex items-center gap-1" id="test-hunter">
+                            <i data-lucide="zap" style="width:12px;height:12px;"></i> Test
+                        </button>
+                        <span class="flex items-center" id="status-hunter"><span class="w-2 h-2 rounded-full" style="background:var(--border);"></span></span>
+                    </div>
+                </div>
+
+                <!-- Snov.io -->
+                <div class="api-key-row" data-service="snov">
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">
+                        Snov.io <span class="text-xs ml-1" style="color: var(--text-muted);">Email enrichment</span>
+                    </label>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <input type="text" name="snov_user_id" id="f_snov_user_id" class="input w-full font-mono text-xs" value="{{ s.snov_user_id or '' }}" placeholder="User ID">
+                        <div class="flex gap-2">
+                            <div class="relative flex-1">
+                                <input type="password" name="snov_secret" id="f_snov_secret" class="input w-full font-mono text-xs pr-14" value="{{ s.snov_secret or '' }}" placeholder="Secret">
+                                <button type="button" onclick="toggleVis(this)" class="absolute right-2 top-1/2 -translate-y-1/2 text-xs cursor-pointer" style="color:var(--text-muted);">Show</button>
+                            </div>
+                            <span class="flex items-center" id="status-snov"><span class="w-2 h-2 rounded-full" style="background:var(--border);"></span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gmail -->
+                <div class="pt-4 mt-2" style="border-top: 1px solid var(--border);">
+                    <div class="flex items-center gap-2 mb-3">
+                        <h3 class="text-sm font-semibold" style="color: var(--text-primary);">Gmail API</h3>
+                        <span class="text-xs px-2 py-0.5 rounded-full" style="background:var(--info-soft);color:var(--info);">Email outreach</span>
+                    </div>
+                    <details class="mb-3">
+                        <summary class="text-xs cursor-pointer" style="color:var(--accent);">Setup instructions</summary>
+                        <div class="mt-2 p-3 rounded-lg text-xs" style="background:var(--bg-secondary);color:var(--text-secondary);line-height:1.6;">
+                            <ol class="list-decimal list-inside space-y-1">
+                                <li>Go to Google Cloud Console &rarr; APIs &rarr; Enable Gmail API</li>
+                                <li>Create OAuth 2.0 credentials (Desktop app type)</li>
+                                <li>Download the Client ID and Client Secret</li>
+                                <li>Use the OAuth playground to get a Refresh Token with <code>gmail.send</code> and <code>gmail.readonly</code> scopes</li>
+                                <li>Paste all three values below</li>
+                            </ol>
+                            <p class="mt-2"><strong>Alternative:</strong> Set up a Google Apps Script webhook and paste the URL below.</p>
+                        </div>
+                    </details>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <input type="text" name="gmail_client_id" id="f_gmail_client_id" class="input w-full font-mono text-xs" value="{{ s.gmail_client_id or '' }}" placeholder="Gmail Client ID">
+                        <div class="relative">
+                            <input type="password" name="gmail_client_secret" id="f_gmail_client_secret" class="input w-full font-mono text-xs pr-14" value="{{ s.gmail_client_secret or '' }}" placeholder="Gmail Client Secret">
+                            <button type="button" onclick="toggleVis(this)" class="absolute right-2 top-1/2 -translate-y-1/2 text-xs cursor-pointer" style="color:var(--text-muted);">Show</button>
+                        </div>
+                    </div>
+                    <div class="mt-2 relative">
+                        <input type="password" name="gmail_refresh_token" id="f_gmail_refresh_token" class="input w-full font-mono text-xs pr-14" value="{{ s.gmail_refresh_token or '' }}" placeholder="Gmail Refresh Token">
+                        <button type="button" onclick="toggleVis(this)" class="absolute right-2 top-1/2 -translate-y-1/2 text-xs cursor-pointer" style="color:var(--text-muted);">Show</button>
+                    </div>
+                    <div class="mt-2">
+                        <input type="url" name="gmail_webhook_url" id="f_gmail_webhook_url" class="input w-full font-mono text-xs" value="{{ s.gmail_webhook_url or '' }}" placeholder="Google Apps Script webhook URL (alternative)">
+                    </div>
+                </div>
+
+                <!-- LinkedIn -->
+                <div class="pt-4 mt-2" style="border-top: 1px solid var(--border);">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <h3 class="text-sm font-semibold" style="color: var(--text-primary);">LinkedIn</h3>
+                            <span class="text-xs px-2 py-0.5 rounded-full" style="background:rgba(124,58,237,0.1);color:#7c3aed;">Optional</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs" style="color:var(--text-muted);">Manual Copy-Paste Mode</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" name="linkedin_manual_mode" id="f_linkedin_manual_mode" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <details class="mb-3">
+                        <summary class="text-xs cursor-pointer" style="color:var(--accent);">Setup instructions</summary>
+                        <div class="mt-2 p-3 rounded-lg text-xs" style="background:var(--bg-secondary);color:var(--text-secondary);line-height:1.6;">
+                            <p><strong>Manual Mode (Recommended):</strong> The system generates messages for you. You copy-paste them into LinkedIn manually. Safest approach — zero risk of account restrictions.</p>
+                            <p class="mt-1"><strong>Extension Mode:</strong> Requires a LinkedIn automation browser extension. Enter your API credentials below. Use at your own risk — LinkedIn may restrict automated activity.</p>
+                        </div>
+                    </details>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <input type="text" name="linkedin_client_id" id="f_linkedin_client_id" class="input w-full font-mono text-xs" value="{{ s.linkedin_client_id or '' }}" placeholder="LinkedIn Client ID">
+                        <div class="relative">
+                            <input type="password" name="linkedin_client_secret" id="f_linkedin_client_secret" class="input w-full font-mono text-xs pr-14" value="{{ s.linkedin_client_secret or '' }}" placeholder="LinkedIn Client Secret">
+                            <button type="button" onclick="toggleVis(this)" class="absolute right-2 top-1/2 -translate-y-1/2 text-xs cursor-pointer" style="color:var(--text-muted);">Show</button>
+                        </div>
+                    </div>
+                    <div class="mt-2 relative">
+                        <input type="password" name="linkedin_access_token" id="f_linkedin_access_token" class="input w-full font-mono text-xs pr-14" value="{{ s.linkedin_access_token or '' }}" placeholder="LinkedIn Access Token">
+                        <button type="button" onclick="toggleVis(this)" class="absolute right-2 top-1/2 -translate-y-1/2 text-xs cursor-pointer" style="color:var(--text-muted);">Show</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- SEARCH TAB                                  -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="settings-panel" id="panel-search">
+        <div class="card p-6">
+            <div class="flex items-center gap-3 mb-5">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background: var(--info-soft);">
+                    <i data-lucide="search" style="width:18px;height:18px;color:var(--info);"></i>
+                </div>
+                <div>
+                    <h2 class="font-semibold" style="color: var(--text-primary);">Search Preferences</h2>
+                    <p class="text-xs" style="color: var(--text-muted);">Define what jobs to look for</p>
+                </div>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">Target Roles <span class="text-xs ml-1" style="color: var(--text-muted);">Comma-separated</span></label>
+                    <input type="text" name="search_roles" id="f_search_roles" class="input w-full" value="{{ s.search_roles or '' }}" placeholder="Account Executive, Sales Manager, Founding AE">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">Target Locations <span class="text-xs ml-1" style="color: var(--text-muted);">Comma-separated</span></label>
+                    <input type="text" name="search_locations" id="f_search_locations" class="input w-full" value="{{ s.search_locations or '' }}" placeholder="Ireland, Remote - Europe, Dublin, London">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">Target Industries <span class="text-xs ml-1" style="color: var(--text-muted);">Comma-separated</span></label>
+                    <input type="text" name="search_industries" id="f_search_industries" class="input w-full" value="{{ s.search_industries or '' }}" placeholder="AI, SaaS, Fintech, Cybersecurity">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">Exclude Keywords <span class="text-xs ml-1" style="color: var(--text-muted);">Skip jobs containing these</span></label>
+                    <input type="text" name="exclude_keywords" id="f_exclude_keywords" class="input w-full" value="{{ s.exclude_keywords or '' }}" placeholder="intern, junior, entry level, graduate">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- LIMITS TAB                                  -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="settings-panel" id="panel-limits">
+        <div class="card p-6">
+            <div class="flex items-center gap-3 mb-5">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background: var(--success-soft);">
+                    <i data-lucide="timer" style="width:18px;height:18px;color:var(--success);"></i>
+                </div>
+                <div>
+                    <h2 class="font-semibold" style="color: var(--text-primary);">Outreach Limits</h2>
+                    <p class="text-xs" style="color: var(--text-muted);">Control daily and weekly sending limits</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">Daily Message Limit</label>
+                    <input type="number" name="daily_message_limit" id="f_daily_message_limit" class="input w-full" value="{{ s.daily_message_limit or 20 }}" min="1" max="100">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">Daily LinkedIn Invites</label>
+                    <input type="number" name="daily_linkedin_limit" id="f_daily_linkedin_limit" class="input w-full" value="{{ s.daily_linkedin_limit or 15 }}" min="1" max="50">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">Weekly LinkedIn Invites</label>
+                    <input type="number" name="weekly_linkedin_limit" id="f_weekly_linkedin_limit" class="input w-full" value="{{ s.weekly_linkedin_limit or 100 }}" min="1" max="250">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">Follow-up After (days)</label>
+                    <input type="number" name="follow_up_days" id="f_follow_up_days" class="input w-full" value="{{ s.follow_up_days or 4 }}" min="1" max="14">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">Max Follow-ups</label>
+                    <input type="number" name="max_follow_ups" id="f_max_follow_ups" class="input w-full" value="{{ s.max_follow_ups or 1 }}" min="0" max="5">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">Max Contacts/Company</label>
+                    <input type="number" name="max_contacts_per_company" id="f_max_contacts_per_company" class="input w-full" value="{{ s.max_contacts_per_company or 3 }}" min="1" max="10">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- A/B TESTING TAB                             -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="settings-panel" id="panel-ab-testing">
+        <div class="card p-6">
+            <div class="flex items-center gap-3 mb-5">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background: rgba(124,58,237,0.1);">
+                    <i data-lucide="flask-conical" style="width:18px;height:18px;color:#7c3aed;"></i>
+                </div>
+                <div>
+                    <h2 class="font-semibold" style="color: var(--text-primary);">A/B Testing</h2>
+                    <p class="text-xs" style="color: var(--text-muted);">Control when variants are evaluated and retired</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">Min Sends/Variant</label>
+                    <input type="number" name="min_sends_per_variant" id="f_min_sends_per_variant" class="input w-full" value="{{ s.min_sends_per_variant or 10 }}" min="5" max="50">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">Min Replies to Evaluate</label>
+                    <input type="number" name="min_total_replies" id="f_min_total_replies" class="input w-full" value="{{ s.min_total_replies or 30 }}" min="10" max="100">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">Kill Threshold (%)</label>
+                    <input type="number" name="kill_threshold" id="f_kill_threshold" class="input w-full" value="{{ s.kill_threshold or 30 }}" min="10" max="80">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">Boost Threshold (%)</label>
+                    <input type="number" name="boost_threshold" id="f_boost_threshold" class="input w-full" value="{{ s.boost_threshold or 30 }}" min="10" max="80">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">Min Active Variants</label>
+                    <input type="number" name="min_active_variants" id="f_min_active_variants" class="input w-full" value="{{ s.min_active_variants or 4 }}" min="2" max="10">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- TIER 1 TAB                                  -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="settings-panel" id="panel-tier1">
+        <div class="card p-6">
+            <div class="flex items-center gap-3 mb-5">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background: var(--danger-soft);">
+                    <i data-lucide="shield-alert" style="width:18px;height:18px;color:var(--danger);"></i>
+                </div>
+                <div>
+                    <h2 class="font-semibold" style="color: var(--text-primary);">Tier 1 Companies (Manual Apply Only)</h2>
+                    <p class="text-xs" style="color: var(--text-muted);">These companies are excluded from automation</p>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">Company Names <span class="text-xs ml-1" style="color: var(--text-muted);">One per line</span></label>
+                <textarea name="tier1_companies" id="f_tier1_companies" rows="10" class="input w-full" style="min-height:200px;" placeholder="Salesforce&#10;Google&#10;HubSpot&#10;...">{{ s.tier1_companies or '' }}</textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Button -->
+    <div class="flex justify-end gap-3 py-6">
+        <a href="/" class="btn btn-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary px-8" id="save-btn">
+            <i data-lucide="save" style="width:14px;height:14px;"></i> Save Settings
+        </button>
+    </div>
+</form>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- CONNECTORS TAB (outside main form)         -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="settings-panel" id="panel-connectors">
+    <div class="card p-6 mb-6">
+        <div class="flex items-center gap-3 mb-5">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, var(--accent-soft), rgba(124,58,237,0.1));">
+                <i data-lucide="plug" style="width:18px;height:18px;color:var(--accent);"></i>
+            </div>
+            <div>
+                <h2 class="font-semibold" style="color: var(--text-primary);">Connectors & Integrations</h2>
+                <p class="text-xs" style="color: var(--text-muted);">Status of your connected services</p>
+            </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="connector-grid">
+            <!-- Claude AI -->
+            <div class="connector-card" data-service="anthropic" style="border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;display:flex;align-items:center;gap:14px;background:var(--bg-surface);transition:all 0.2s;">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,#D97706,#F59E0B);"><svg width="18" height="18" fill="white" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div>
+                <div class="flex-1 min-w-0">
+                    <div class="font-semibold text-sm" style="color:var(--text-primary);">Claude AI</div>
+                    <div class="text-xs" style="color:var(--text-muted);">Sage, messages, CV tailoring</div>
+                    <div class="connector-status text-xs mt-1" style="color:var(--text-muted);">Checking...</div>
+                </div>
+                <button onclick="testConnector('anthropic', this)" class="btn btn-secondary" style="font-size:11px;padding:4px 12px;"><i data-lucide="zap" style="width:12px;height:12px;"></i> Test</button>
+            </div>
+            <!-- Gemini -->
+            <div class="connector-card" data-service="gemini" style="border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;display:flex;align-items:center;gap:14px;background:var(--bg-surface);transition:all 0.2s;">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,#4285F4,#34A853);"><svg width="18" height="18" fill="white" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01z"/></svg></div>
+                <div class="flex-1 min-w-0">
+                    <div class="font-semibold text-sm" style="color:var(--text-primary);">Google Gemini</div>
+                    <div class="text-xs" style="color:var(--text-muted);">Alternative AI engine</div>
+                    <div class="connector-status text-xs mt-1" style="color:var(--text-muted);">Checking...</div>
+                </div>
+                <button onclick="testConnector('gemini', this)" class="btn btn-secondary" style="font-size:11px;padding:4px 12px;"><i data-lucide="zap" style="width:12px;height:12px;"></i> Test</button>
+            </div>
+            <!-- Adzuna -->
+            <div class="connector-card" data-service="adzuna" style="border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;display:flex;align-items:center;gap:14px;background:var(--bg-surface);transition:all 0.2s;">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,#059669,#10B981);"><i data-lucide="briefcase" style="width:18px;height:18px;color:white;"></i></div>
+                <div class="flex-1 min-w-0">
+                    <div class="font-semibold text-sm" style="color:var(--text-primary);">Adzuna</div>
+                    <div class="text-xs" style="color:var(--text-muted);">Job sourcing</div>
+                    <div class="connector-status text-xs mt-1" style="color:var(--text-muted);">Checking...</div>
+                </div>
+                <button onclick="testConnector('adzuna', this)" class="btn btn-secondary" style="font-size:11px;padding:4px 12px;"><i data-lucide="zap" style="width:12px;height:12px;"></i> Test</button>
+            </div>
+            <!-- Apollo -->
+            <div class="connector-card" data-service="apollo" style="border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;display:flex;align-items:center;gap:14px;background:var(--bg-surface);transition:all 0.2s;">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,#6366F1,#818CF8);"><i data-lucide="users" style="width:18px;height:18px;color:white;"></i></div>
+                <div class="flex-1 min-w-0">
+                    <div class="font-semibold text-sm" style="color:var(--text-primary);">Apollo.io</div>
+                    <div class="text-xs" style="color:var(--text-muted);">Contact enrichment</div>
+                    <div class="connector-status text-xs mt-1" style="color:var(--text-muted);">Checking...</div>
+                </div>
+                <button onclick="testConnector('apollo', this)" class="btn btn-secondary" style="font-size:11px;padding:4px 12px;"><i data-lucide="zap" style="width:12px;height:12px;"></i> Test</button>
+            </div>
+            <!-- Hunter -->
+            <div class="connector-card" data-service="hunter" style="border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;display:flex;align-items:center;gap:14px;background:var(--bg-surface);transition:all 0.2s;">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,#EA580C,#F97316);"><i data-lucide="mail" style="width:18px;height:18px;color:white;"></i></div>
+                <div class="flex-1 min-w-0">
+                    <div class="font-semibold text-sm" style="color:var(--text-primary);">Hunter.io</div>
+                    <div class="text-xs" style="color:var(--text-muted);">Email finder</div>
+                    <div class="connector-status text-xs mt-1" style="color:var(--text-muted);">Checking...</div>
+                </div>
+                <button onclick="testConnector('hunter', this)" class="btn btn-secondary" style="font-size:11px;padding:4px 12px;"><i data-lucide="zap" style="width:12px;height:12px;"></i> Test</button>
+            </div>
+            <!-- Gmail -->
+            <div class="connector-card" data-service="gmail" style="border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;display:flex;align-items:center;gap:14px;background:var(--bg-surface);transition:all 0.2s;">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,#DC2626,#EF4444);"><i data-lucide="inbox" style="width:18px;height:18px;color:white;"></i></div>
+                <div class="flex-1 min-w-0">
+                    <div class="font-semibold text-sm" style="color:var(--text-primary);">Gmail</div>
+                    <div class="text-xs" style="color:var(--text-muted);">Email outreach & replies</div>
+                    <div class="connector-status text-xs mt-1" style="color:var(--text-muted);">Checking...</div>
+                </div>
+                <button onclick="testConnector('gmail', this)" class="btn btn-secondary" style="font-size:11px;padding:4px 12px;"><i data-lucide="zap" style="width:12px;height:12px;"></i> Test</button>
+            </div>
+        </div>
+        <div class="mt-6 p-4 rounded-lg" style="background:var(--accent-soft);border:1px solid color-mix(in srgb, var(--accent) 20%, transparent);">
+            <div class="flex items-center gap-2 mb-2">
+                <i data-lucide="sparkles" style="width:16px;height:16px;color:var(--accent);"></i>
+                <span class="text-sm font-semibold" style="color:var(--accent);">Quick Setup via Sage</span>
+            </div>
+            <p class="text-xs" style="color:var(--text-secondary);line-height:1.5;">
+                Configure connectors via Sage chat: <em>"Connect my Apollo API"</em>, <em>"Change daily limit to 25"</em>
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- NOTIFICATIONS TAB                           -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="settings-panel" id="panel-notifications">
+    <div class="card p-6 mb-6">
+        <div class="flex items-center gap-3 mb-5">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background: var(--info-soft);">
+                <i data-lucide="bell" style="width:18px;height:18px;color:var(--info);"></i>
+            </div>
+            <div>
+                <h2 class="font-semibold" style="color: var(--text-primary);">Notification Preferences</h2>
+                <p class="text-xs" style="color: var(--text-muted);">Control what alerts you see</p>
+            </div>
+        </div>
+        <div class="space-y-5">
+            <div class="flex items-center justify-between p-4 rounded-lg" style="background: var(--bg-secondary);">
+                <div><div class="text-sm font-medium" style="color: var(--text-primary);">Draft Review Reminders</div><div class="text-xs" style="color: var(--text-muted);">Alert when you have pending drafts</div></div>
+                <label class="toggle-switch"><input type="checkbox" checked onchange="toggleNotifSetting('drafts',this.checked)"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="flex items-center justify-between p-4 rounded-lg" style="background: var(--bg-secondary);">
+                <div><div class="text-sm font-medium" style="color: var(--text-primary);">Reply Alerts</div><div class="text-xs" style="color: var(--text-muted);">Notified when a contact replies</div></div>
+                <label class="toggle-switch"><input type="checkbox" checked onchange="toggleNotifSetting('replies',this.checked)"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="flex items-center justify-between p-4 rounded-lg" style="background: var(--bg-secondary);">
+                <div><div class="text-sm font-medium" style="color: var(--text-primary);">Follow-up Reminders</div><div class="text-xs" style="color: var(--text-muted);">Remind when follow-ups are due</div></div>
+                <label class="toggle-switch"><input type="checkbox" checked onchange="toggleNotifSetting('followups',this.checked)"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="flex items-center justify-between p-4 rounded-lg" style="background: var(--bg-secondary);">
+                <div><div class="text-sm font-medium" style="color: var(--text-primary);">LinkedIn Quota Warnings</div><div class="text-xs" style="color: var(--text-muted);">Warn near daily/weekly limits</div></div>
+                <label class="toggle-switch"><input type="checkbox" checked onchange="toggleNotifSetting('quota',this.checked)"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="flex items-center justify-between p-4 rounded-lg" style="background: var(--bg-secondary);">
+                <div><div class="text-sm font-medium" style="color: var(--text-primary);">Daily Digest Email</div><div class="text-xs" style="color: var(--text-muted);">Summary email at 8 PM daily</div></div>
+                <label class="toggle-switch"><input type="checkbox" checked onchange="toggleNotifSetting('digest',this.checked)"><span class="toggle-slider"></span></label>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- VOICE TAB                                   -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="settings-panel" id="panel-voice">
+    <div class="card p-6 mb-6">
+        <div class="flex items-center gap-3 mb-5">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background: rgba(124,58,237,0.1);">
+                <i data-lucide="mic" style="width:18px;height:18px;color:#7c3aed;"></i>
+            </div>
+            <div>
+                <h2 class="font-semibold" style="color: var(--text-primary);">Voice Settings</h2>
+                <p class="text-xs" style="color: var(--text-muted);">Configure voice input and speech recognition</p>
+            </div>
+        </div>
+        <div class="space-y-5">
+            <div class="p-4 rounded-lg" style="background: var(--bg-secondary);">
+                <div class="flex items-center justify-between mb-3">
+                    <div><div class="text-sm font-medium" style="color: var(--text-primary);">Voice Input</div><div class="text-xs" style="color: var(--text-muted);">Enable microphone for voice commands</div></div>
+                    <span class="text-xs px-2.5 py-1 rounded-full font-medium" id="voice-support-badge" style="background:var(--success-soft);color:var(--success);">Supported</span>
+                </div>
+                <div class="text-xs" style="color: var(--text-muted); line-height: 1.6;">
+                    Press <kbd style="background:var(--bg-surface);border:1px solid var(--border);padding:1px 6px;border-radius:3px;">V</kbd> anywhere to toggle voice.
+                    Commands: <strong>"open jobs"</strong>, <strong>"show drafts"</strong>, <strong>"approve all"</strong>.
+                </div>
+            </div>
+            <div class="p-4 rounded-lg" style="background: var(--bg-secondary);">
+                <label class="block text-sm font-medium mb-2" style="color: var(--text-primary);">Language</label>
+                <select class="input w-full" id="voice-language" onchange="localStorage.setItem('voice-lang',this.value)">
+                    <option value="en-US">English (US)</option>
+                    <option value="en-GB">English (UK)</option>
+                    <option value="en-IE">English (Ireland)</option>
+                </select>
+            </div>
+            <div class="p-4 rounded-lg" style="background: var(--bg-secondary);">
+                <div class="text-sm font-medium mb-3" style="color: var(--text-primary);">Test Microphone</div>
+                <button onclick="testMicrophone()" class="btn btn-secondary" id="mic-test-btn">
+                    <i data-lucide="mic" style="width:14px;height:14px;"></i> Start Test
+                </button>
+                <div id="mic-test-result" class="text-xs mt-2" style="color: var(--text-muted);"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- DATA & MEMORY TAB                           -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="settings-panel" id="panel-data">
+    <div class="card p-6 mb-6">
+        <div class="flex items-center gap-3 mb-5">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background: var(--danger-soft);">
+                <i data-lucide="database" style="width:18px;height:18px;color:var(--danger);"></i>
+            </div>
+            <div>
+                <h2 class="font-semibold" style="color: var(--text-primary);">Data & Memory Controls</h2>
+                <p class="text-xs" style="color: var(--text-muted);">Manage your pipeline data and storage</p>
+            </div>
+        </div>
+        <div class="space-y-5">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="p-4 rounded-lg text-center" style="background: var(--bg-secondary);"><div class="text-xl font-bold" style="color: var(--text-primary);" id="db-jobs">--</div><div class="text-xs" style="color: var(--text-muted);">Jobs</div></div>
+                <div class="p-4 rounded-lg text-center" style="background: var(--bg-secondary);"><div class="text-xl font-bold" style="color: var(--text-primary);" id="db-contacts">--</div><div class="text-xs" style="color: var(--text-muted);">Contacts</div></div>
+                <div class="p-4 rounded-lg text-center" style="background: var(--bg-secondary);"><div class="text-xl font-bold" style="color: var(--text-primary);" id="db-messages">--</div><div class="text-xs" style="color: var(--text-muted);">Messages</div></div>
+                <div class="p-4 rounded-lg text-center" style="background: var(--bg-secondary);"><div class="text-xl font-bold" style="color: var(--text-primary);" id="db-cvs">--</div><div class="text-xs" style="color: var(--text-muted);">CVs</div></div>
+            </div>
+            <div class="p-4 rounded-lg" style="background: var(--bg-secondary);">
+                <div class="flex items-center gap-2 mb-3">
+                    <i data-lucide="brain" style="width:14px;height:14px;color:var(--accent);"></i>
+                    <span class="text-sm font-medium" style="color: var(--text-primary);">What the System Knows About You</span>
+                </div>
+                <div class="space-y-2" id="memory-items"></div>
+            </div>
+            <div class="p-4 rounded-lg" style="border: 1px solid var(--danger); background: var(--danger-soft);">
+                <div class="flex items-center gap-2 mb-3">
+                    <i data-lucide="alert-triangle" style="width:14px;height:14px;color:var(--danger);"></i>
+                    <span class="text-sm font-semibold" style="color: var(--danger);">Danger Zone</span>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div><div class="text-sm" style="color: var(--text-primary);">Clear Notifications</div><div class="text-xs" style="color: var(--text-muted);">Reset all dismissals</div></div>
+                        <button onclick="localStorage.removeItem('dismissed-notifs');window.toast&&window.toast.success('Cleared')" class="btn btn-secondary" style="font-size:11px;padding:4px 12px;">Clear</button>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div><div class="text-sm" style="color: var(--text-primary);">Clear Chat History</div><div class="text-xs" style="color: var(--text-muted);">Reset Sage memory</div></div>
+                        <button onclick="if(typeof sageHistory!=='undefined')sageHistory=[];window.toast&&window.toast.success('Cleared')" class="btn btn-secondary" style="font-size:11px;padding:4px 12px;">Clear</button>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div><div class="text-sm" style="color: var(--text-primary);">Clear All Local Settings</div><div class="text-xs" style="color: var(--text-muted);">Reset localStorage settings</div></div>
+                        <button onclick="if(confirm('Clear all local settings?')){localStorage.removeItem('user_profile');localStorage.removeItem('api_keys');localStorage.removeItem('user_cv_text');window.toast&&window.toast.success('Local settings cleared')}" class="btn btn-secondary" style="font-size:11px;padding:4px 12px;color:var(--danger);">Clear</button>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div><div class="text-sm" style="color: var(--text-primary);">Export All Data</div><div class="text-xs" style="color: var(--text-muted);">Download as JSON</div></div>
+                        <button onclick="exportData()" class="btn btn-secondary" style="font-size:11px;padding:4px 12px;"><i data-lucide="download" style="width:12px;height:12px;"></i> Export</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- JAVASCRIPT                                  -->
+<!-- ═══════════════════════════════════════════ -->
+<script>
+// ── Constants ──
+var INDUSTRY_OPTIONS = ['AI','SaaS','Fintech','Cybersecurity','Healthtech','Edtech','E-commerce','Marketplace','DevTools','Data','Cloud','IoT','Blockchain','Gaming','Climate','HR Tech','Legal Tech','Insurtech','Proptech','Other'];
+
+// ── Tab switching ──
+function switchTab(tabName) {
+    document.querySelectorAll('.settings-tab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.settings-panel').forEach(function(p) { p.classList.remove('active'); });
+    var tab = document.querySelector('[data-tab="' + tabName + '"]');
+    var panel = document.getElementById('panel-' + tabName);
+    if (tab) tab.classList.add('active');
+    if (panel) panel.classList.add('active');
+    localStorage.setItem('settings-tab', tabName);
+}
+
+// ── Tags input system ──
+var tagData = { titles: [], locations: [], skills: [] };
+
+function handleTagKey(e, group) {
+    if (e.key === 'Enter' || e.key === ',') {
+        e.preventDefault();
+        var val = e.target.value.trim().replace(/,$/,'');
+        if (val && tagData[group].indexOf(val) === -1) {
+            tagData[group].push(val);
+            renderTags(group);
+        }
+        e.target.value = '';
+    }
+    if (e.key === 'Backspace' && !e.target.value && tagData[group].length) {
+        tagData[group].pop();
+        renderTags(group);
+    }
+}
+
+function removeTag(group, idx) {
+    tagData[group].splice(idx, 1);
+    renderTags(group);
+}
+
+function renderTags(group) {
+    var container = document.getElementById('tags-' + group);
+    var input = container.querySelector('input[type="text"]');
+    // Remove existing tags
+    container.querySelectorAll('.tag').forEach(function(t) { t.remove(); });
+    // Add tags before input
+    tagData[group].forEach(function(val, i) {
+        var tag = document.createElement('span');
+        tag.className = 'tag';
+        tag.innerHTML = val + ' <span class="tag-remove" onclick="removeTag(\'' + group + '\',' + i + ')">&times;</span>';
+        container.insertBefore(tag, input);
+    });
+    // Update hidden input
+    var hiddenId = group === 'titles' ? 'f_desired_titles' : group === 'locations' ? 'f_desired_locations' : 'f_skills';
+    document.getElementById(hiddenId).value = tagData[group].join(', ');
+}
+
+// ── Industry chips ──
+var selectedIndustries = [];
+
+function renderIndustryChips() {
+    var grid = document.getElementById('industry-chips');
+    grid.innerHTML = '';
+    INDUSTRY_OPTIONS.forEach(function(ind) {
+        var chip = document.createElement('span');
+        chip.className = 'chip' + (selectedIndustries.indexOf(ind) > -1 ? ' selected' : '');
+        chip.textContent = ind;
+        chip.onclick = function() {
+            var idx = selectedIndustries.indexOf(ind);
+            if (idx > -1) { selectedIndustries.splice(idx, 1); chip.classList.remove('selected'); }
+            else { selectedIndustries.push(ind); chip.classList.add('selected'); }
+            document.getElementById('f_industries').value = selectedIndustries.join(', ');
+        };
+        grid.appendChild(chip);
+    });
+}
+
+// ── Character counter ──
+function updateCharCount(el, max) {
+    var counter = el.parentElement.querySelector('.char-counter') || document.getElementById('about-counter');
+    var len = el.value.length;
+    counter.textContent = len + '/' + max;
+    counter.className = 'char-counter' + (len > max ? ' over' : '');
+}
+
+// ── Show/Hide password ──
+function toggleVis(btn) {
+    var input = btn.parentElement.querySelector('input');
+    if (input.type === 'password') { input.type = 'text'; btn.textContent = 'Hide'; }
+    else { input.type = 'password'; btn.textContent = 'Show'; }
+}
+
+// ── API Key Testing ──
+function testApiKey(service) {
+    var btn = document.getElementById('test-' + service);
+    var statusEl = document.getElementById('status-' + service);
+    btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader" style="width:12px;height:12px;"></i> ...';
+
+    function setStatus(color, tooltip) {
+        statusEl.innerHTML = '<span class="w-2 h-2 rounded-full" style="background:var(--' + color + ');" title="' + tooltip + '"></span>';
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="zap" style="width:12px;height:12px;"></i> Test';
+        if (window.lucide) lucide.createIcons();
+        if (window.toast) window.toast[color === 'success' ? 'success' : 'error'](service + ': ' + tooltip);
+    }
+
+    if (service === 'adzuna') {
+        var appId = document.getElementById('f_adzuna_app_id').value.trim();
+        var appKey = document.getElementById('f_adzuna_app_key').value.trim();
+        if (!appId || !appKey) { setStatus('danger', 'Missing App ID or Key'); return; }
+        fetch('https://api.adzuna.com/v1/api/jobs/gb/search/1?app_id=' + encodeURIComponent(appId) + '&app_key=' + encodeURIComponent(appKey) + '&what=test')
+            .then(function(r) { return r.ok ? setStatus('success', 'Connected') : setStatus('danger', 'Invalid key (HTTP ' + r.status + ')'); })
+            .catch(function() { setStatus('danger', 'Connection failed'); });
+    } else if (service === 'hunter') {
+        var key = document.getElementById('f_hunter_api_key').value.trim();
+        if (!key) { setStatus('danger', 'No key set'); return; }
+        fetch('https://api.hunter.io/v2/account?api_key=' + encodeURIComponent(key))
+            .then(function(r) { return r.ok ? setStatus('success', 'Connected') : setStatus('danger', 'Invalid key'); })
+            .catch(function() { setStatus('danger', 'Connection failed'); });
+    } else if (service === 'gemini') {
+        var gKey = document.getElementById('f_gemini_api_key').value.trim();
+        if (!gKey) { setStatus('danger', 'No key set'); return; }
+        fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + encodeURIComponent(gKey), {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({contents:[{parts:[{text:"Say hi"}]}]})
+        }).then(function(r) { return r.ok ? setStatus('success', 'Connected') : setStatus('danger', 'Invalid key (HTTP ' + r.status + ')'); })
+          .catch(function() { setStatus('danger', 'Connection failed'); });
+    } else {
+        // For anthropic, apollo — test via server API
+        fetch('/api/connectors/test', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({service: service})
+        }).then(function(r) { return r.json(); })
+          .then(function(data) {
+              if (data.status === 'connected') setStatus('success', 'Connected');
+              else setStatus('danger', data.detail || 'Not configured');
+          })
+          .catch(function() { setStatus('danger', 'Server error'); });
+    }
+}
+
+// ── Connector test (for connectors tab) ──
+function testConnector(service, btn) {
+    var card = btn.closest('.connector-card');
+    var statusEl = card.querySelector('.connector-status');
+    btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader" style="width:12px;height:12px;"></i> ...';
+    statusEl.textContent = 'Testing...';
+
+    fetch('/api/connectors/test', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({service: service}) })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            btn.disabled = false;
+            if (data.status === 'connected') {
+                statusEl.innerHTML = '<span style="color:var(--success);">&#9679;</span> Connected'; statusEl.style.color = 'var(--success)'; card.style.borderColor = 'var(--success)';
+            } else {
+                statusEl.innerHTML = '<span style="color:var(--danger);">&#9679;</span> ' + (data.detail||'Not configured'); statusEl.style.color = 'var(--danger)'; card.style.borderColor = 'var(--border)';
+            }
+            btn.innerHTML = '<i data-lucide="zap" style="width:12px;height:12px;"></i> Test';
+            if (window.lucide) lucide.createIcons();
+        })
+        .catch(function() {
+            btn.disabled = false; statusEl.textContent = 'Error'; statusEl.style.color = 'var(--danger)';
+            btn.innerHTML = '<i data-lucide="zap" style="width:12px;height:12px;"></i> Test';
+            if (window.lucide) lucide.createIcons();
+        });
+}
+
+// ── Notification toggles ──
+function toggleNotifSetting(key, enabled) {
+    var settings = JSON.parse(localStorage.getItem('notif-settings') || '{}');
+    settings[key] = enabled;
+    localStorage.setItem('notif-settings', JSON.stringify(settings));
+    if (window.toast) window.toast.success(key + ' ' + (enabled ? 'enabled' : 'disabled'));
+}
+
+// ── Voice test ──
+function testMicrophone() {
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    var result = document.getElementById('mic-test-result');
+    var btn = document.getElementById('mic-test-btn');
+    if (!SR) { result.innerHTML = '<span style="color:var(--danger);">Not supported in this browser.</span>'; return; }
+    btn.disabled = true; btn.innerHTML = '<i data-lucide="loader" style="width:14px;height:14px;"></i> Listening...';
+    result.innerHTML = '<span style="color:var(--accent);">Speak something...</span>';
+    var rec = new SR(); rec.continuous = false; rec.interimResults = false;
+    rec.lang = document.getElementById('voice-language').value || 'en-US';
+    rec.onresult = function(e) { result.innerHTML = '<span style="color:var(--success);">Heard: "' + e.results[0][0].transcript + '"</span>'; done(); };
+    rec.onerror = function(e) { result.innerHTML = '<span style="color:var(--danger);">Error: ' + e.error + '</span>'; done(); };
+    rec.onend = done;
+    function done() { btn.disabled = false; btn.innerHTML = '<i data-lucide="mic" style="width:14px;height:14px;"></i> Start Test'; if (window.lucide) lucide.createIcons(); }
+    rec.start();
+}
+
+// ── Export data ──
+function exportData() {
+    var allData = { profile: JSON.parse(localStorage.getItem('user_profile') || '{}'), api_keys: '(redacted)', settings: JSON.parse(localStorage.getItem('oa_settings') || '{}') };
+    fetch('/api/stats').then(function(r) { return r.json(); }).then(function(data) {
+        allData.stats = data;
+        downloadJSON(allData);
+    }).catch(function() { downloadJSON(allData); });
+}
+function downloadJSON(data) {
+    var blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = 'outreach-agent-export-' + new Date().toISOString().slice(0,10) + '.json';
+    a.click(); URL.revokeObjectURL(a.href);
+    if (window.toast) window.toast.success('Data exported');
+}
+
+// ── Settings save handler (hybrid: server + localStorage) ──
+function handleSettingsSave(e) {
+    // Save to localStorage first
+    var form = document.getElementById('settings-form');
+    var formData = new FormData(form);
+    var profile = {}; var apiKeys = {};
+    var profileFields = ['full_name','profile_email','phone','location','linkedin_url','portfolio_url','headline','years_experience','salary_min','salary_max','desired_titles','desired_locations','industries','about_me','skills'];
+    var apiFields = ['anthropic_api_key','gemini_api_key','adzuna_app_id','adzuna_app_key','apollo_api_key','hunter_api_key','snov_user_id','snov_secret','gmail_client_id','gmail_client_secret','gmail_refresh_token','gmail_webhook_url','linkedin_client_id','linkedin_client_secret','linkedin_access_token'];
+
+    for (var [key, val] of formData.entries()) {
+        if (profileFields.indexOf(key) > -1) profile[key] = val;
+        else if (apiFields.indexOf(key) > -1) apiKeys[key] = val;
+    }
+    localStorage.setItem('user_profile', JSON.stringify(profile));
+    localStorage.setItem('api_keys', JSON.stringify(apiKeys));
+    // Store CV text separately
+    var cvText = document.getElementById('f_cv_text');
+    if (cvText) localStorage.setItem('user_cv_text', cvText.value);
+
+    // Store all settings in one place too
+    var allSettings = {};
+    for (var [k, v] of formData.entries()) { allSettings[k] = v; }
+    localStorage.setItem('oa_settings', JSON.stringify(allSettings));
+
+    // Now submit to server as well (will redirect)
+    return true;
+}
+
+// ── Load DB stats ──
+function loadDbStats() {
+    fetch('/api/stats').then(function(r) { return r.json(); }).then(function(data) {
+        document.getElementById('db-jobs').textContent = data.total_jobs || 0;
+        document.getElementById('db-contacts').textContent = data.total_contacts || 0;
+        document.getElementById('db-messages').textContent = data.total_messages || 0;
+        document.getElementById('db-cvs').textContent = data.cvs || 0;
+    }).catch(function() {});
+}
+
+// ── Load memory items ──
+function loadMemoryItems() {
+    var container = document.getElementById('memory-items');
+    var profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
+    var settings = JSON.parse(localStorage.getItem('oa_settings') || '{}');
+    var items = [
+        ['Name', profile.full_name || settings.full_name || 'Not set'],
+        ['Target Roles', settings.search_roles || profile.desired_titles || 'Not set'],
+        ['Locations', settings.search_locations || profile.desired_locations || 'Not set'],
+        ['Industries', profile.industries || settings.search_industries || 'Not set'],
+        ['Daily Limit', (settings.daily_message_limit || 20) + ' messages/day'],
+        ['Follow-up After', (settings.follow_up_days || 4) + ' days'],
+    ];
+    container.innerHTML = items.map(function(item) {
+        return '<div class="flex justify-between text-xs p-2 rounded" style="background:var(--bg-surface);"><span style="color:var(--text-muted);">' + item[0] + '</span><span style="color:var(--text-primary);">' + item[1] + '</span></div>';
+    }).join('');
+}
+
+// ── Hydrate from localStorage on load ──
+function hydrateFromLocalStorage() {
+    var profile = JSON.parse(localStorage.getItem('user_profile') || '{}');
+    var apiKeys = JSON.parse(localStorage.getItem('api_keys') || '{}');
+    var settings = JSON.parse(localStorage.getItem('oa_settings') || '{}');
+    var cvText = localStorage.getItem('user_cv_text');
+    var all = Object.assign({}, settings, profile, apiKeys);
+
+    // Only fill empty fields (server-rendered values take precedence)
+    Object.keys(all).forEach(function(key) {
+        var el = document.getElementById('f_' + key);
+        if (el && !el.value && all[key]) el.value = all[key];
+    });
+    if (cvText) {
+        var cv = document.getElementById('f_cv_text');
+        if (cv && !cv.value) cv.value = cvText;
+    }
+
+    // Tags
+    ['desired_titles:titles', 'desired_locations:locations', 'skills:skills'].forEach(function(pair) {
+        var parts = pair.split(':');
+        var val = all[parts[0]] || '';
+        if (val) {
+            tagData[parts[1]] = val.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+            renderTags(parts[1]);
+        }
+    });
+
+    // Industry chips
+    var ind = all.industries || '';
+    if (ind) selectedIndustries = ind.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+    renderIndustryChips();
+
+    // About me counter
+    var aboutMe = document.getElementById('f_about_me');
+    if (aboutMe) updateCharCount(aboutMe, 500);
+}
+
+// ── Guest banner ──
+function checkAuth() {
+    var auth = localStorage.getItem('oa_auth');
+    var banner = document.getElementById('guest-banner');
+    if (!auth && banner) banner.classList.remove('hidden');
+}
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', function() {
+    // Restore tab
+    var saved = localStorage.getItem('settings-tab');
+    if (saved) switchTab(saved);
+
+    hydrateFromLocalStorage();
+    checkAuth();
+    loadDbStats();
+    loadMemoryItems();
+
+    // Voice support badge
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    var badge = document.getElementById('voice-support-badge');
+    if (badge) {
+        if (SR) { badge.textContent = 'Supported'; badge.style.background = 'var(--success-soft)'; badge.style.color = 'var(--success)'; }
+        else { badge.textContent = 'Not Supported'; badge.style.background = 'var(--danger-soft)'; badge.style.color = 'var(--danger)'; }
+    }
+    // Restore voice language
+    var lang = localStorage.getItem('voice-lang');
+    if (lang) { var sel = document.getElementById('voice-language'); if (sel) sel.value = lang; }
+
+    // Check connector health
+    fetch('/api/health').then(function(r) { return r.json(); }).then(function(data) {
+        (data.services || []).forEach(function(svc) {
+            var name = svc.name.toLowerCase().replace(/\s+/g, '').replace('.', '');
+            var serviceMap = { 'claudeai': 'anthropic', 'adzuna': 'adzuna', 'apollo': 'apollo', 'hunterio': 'hunter', 'hunter': 'hunter', 'gmail': 'gmail', 'snovio': 'snov', 'snov': 'snov' };
+            var key = serviceMap[name] || name;
+            var card = document.querySelector('.connector-card[data-service="' + key + '"]');
+            if (!card) return;
+            var statusEl = card.querySelector('.connector-status');
+            if (svc.status === 'healthy') {
+                statusEl.innerHTML = '<span style="color:var(--success);">&#9679;</span> Configured'; statusEl.style.color = 'var(--success)';
+                card.style.borderColor = 'color-mix(in srgb, var(--success) 30%, var(--border))';
+            } else {
+                statusEl.innerHTML = '<span style="color:var(--text-muted);">&#9679;</span> Not configured'; statusEl.style.color = 'var(--text-muted)';
+            }
+        });
+    }).catch(function() {});
+
+    if (window.lucide) lucide.createIcons();
+});
+</script>
+{% endblock %}

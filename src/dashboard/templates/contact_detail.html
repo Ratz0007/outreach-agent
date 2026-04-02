@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+{% set active = "contacts" %}
+{% block title %}{{ person.name }} — Contact Detail{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<div class="flex items-center gap-2 text-sm mb-5" style="color: var(--text-muted);">
+    <a href="/contacts" class="transition-colors" style="color: var(--text-muted);" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">
+        <i data-lucide="users" style="width:14px;height:14px;display:inline;vertical-align:-2px;"></i> Contacts
+    </a>
+    <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+    <span class="font-medium" style="color: var(--text-secondary);">{{ person.name }}</span>
+</div>
+
+<!-- Quick Action Bar -->
+<div class="card p-4 mb-6">
+    <div class="flex items-center justify-between flex-wrap gap-3">
+        <div class="flex items-center gap-3">
+            {% set name_parts = person.name.split() %}
+            {% set initials = (name_parts[0][0] if name_parts else '?') + (name_parts[-1][0] if name_parts|length > 1 else '') %}
+            <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+                 style="background: {{ ['#6366f1','#0ea5e9','#8b5cf6','#ec4899','#f97316','#14b8a6','#f43f5e','#84cc16'][person.id % 8] }};">
+                {{ initials|upper }}
+            </div>
+            <div>
+                <div class="font-bold" style="color: var(--text-primary);">{{ person.name }}</div>
+                <div class="text-xs" style="color: var(--text-muted);">{{ person.title or 'No title' }} at {{ person.company or 'Unknown' }}</div>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            {% if person.email %}
+            <a href="mailto:{{ person.email }}" class="btn btn-primary" style="font-size:12px;padding:6px 14px;">
+                <i data-lucide="mail" style="width:13px;height:13px;"></i> Email
+            </a>
+            {% endif %}
+            {% if person.linkedin_url %}
+            <a href="{{ person.linkedin_url }}" target="_blank" class="btn btn-secondary" style="font-size:12px;padding:6px 14px;">
+                <svg width="13" height="13" fill="#0a66c2" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                LinkedIn
+            </a>
+            {% endif %}
+            {% if job and job.application_link %}
+            <a href="{{ job.application_link }}" target="_blank" class="btn btn-success" style="font-size:12px;padding:6px 14px;">
+                <i data-lucide="external-link" style="width:13px;height:13px;"></i> Apply
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- LEFT COLUMN: Contact Info + Job Context -->
+    <div class="lg:col-span-1 space-y-5">
+
+        <!-- Contact Card -->
+        <div class="card p-6">
+            <div class="flex items-start gap-4 mb-5">
+                <div class="w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0"
+                     style="background: {{ ['#6366f1','#0ea5e9','#8b5cf6','#ec4899','#f97316','#14b8a6','#f43f5e','#84cc16'][person.id % 8] }};">
+                    {{ initials|upper }}
+                </div>
+                <div class="min-w-0">
+                    <h1 class="text-xl font-bold truncate" style="color: var(--text-primary);">{{ person.name }}</h1>
+                    <p class="text-sm truncate" style="color: var(--text-muted);">{{ person.title or 'No title' }}</p>
+                    <p class="text-sm" style="color: var(--text-muted);">{{ person.company or '' }}</p>
+                </div>
+            </div>
+
+            <!-- Status & Priority -->
+            <div class="flex flex-wrap gap-2 mb-5">
+                <span class="badge badge-{{ person.next_action or 'pending' }}">{{ (person.next_action or 'pending') | replace('_', ' ') | title }}</span>
+                {% if person.priority == 1 %}
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold" style="background: var(--success-soft); color: var(--success); border: 1px solid color-mix(in srgb, var(--success) 25%, transparent);">
+                    <i data-lucide="star" style="width:11px;height:11px;"></i> P1 — High Priority
+                </span>
+                {% elif person.priority == 2 %}
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold" style="background: var(--warning-soft); color: var(--warning); border: 1px solid color-mix(in srgb, var(--warning) 25%, transparent);">P2 — Medium</span>
+                {% elif person.priority == 3 %}
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold" style="background: var(--bg-secondary); color: var(--text-muted); border: 1px solid var(--border);">P3 — Low</span>
+                {% endif %}
+            </div>
+
+            <!-- Contact Details -->
+            <div class="space-y-3 text-sm">
+                {% if person.email %}
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background: var(--accent-soft);">
+                        <i data-lucide="mail" style="width:14px;height:14px;color:var(--accent);"></i>
+                    </div>
+                    <a href="mailto:{{ person.email }}" class="truncate" style="color: var(--accent);">{{ person.email }}</a>
+                </div>
+                {% endif %}
+                {% if person.linkedin_url %}
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background: rgba(10,102,194,0.1);">
+                        <svg width="14" height="14" fill="#0a66c2" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                    </div>
+                    <a href="{{ person.linkedin_url }}" target="_blank" class="truncate" style="color: #0a66c2;">LinkedIn Profile</a>
+                </div>
+                {% endif %}
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background: var(--bg-secondary);">
+                        <i data-lucide="users" style="width:14px;height:14px;color:var(--text-muted);"></i>
+                    </div>
+                    <span style="color: var(--text-secondary);">{{ (person.relationship_type or 'unknown') | replace('_', ' ') | title }}</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background: var(--bg-secondary);">
+                        <i data-lucide="database" style="width:14px;height:14px;color:var(--text-muted);"></i>
+                    </div>
+                    <span style="color: var(--text-secondary);">Source: {{ person.source or 'unknown' }}</span>
+                </div>
+                {% if person.assigned_variant %}
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background: rgba(124,58,237,0.1);">
+                        <i data-lucide="flask-conical" style="width:14px;height:14px;color:#7c3aed;"></i>
+                    </div>
+                    <span class="font-medium" style="color: #7c3aed;">Variant {{ person.assigned_variant }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if person.notes %}
+            <div class="mt-5 pt-4" style="border-top: 1px solid var(--border);">
+                <p class="text-xs font-semibold uppercase tracking-wider mb-2" style="color: var(--text-muted);">Notes</p>
+                <p class="text-sm" style="color: var(--text-secondary);">{{ person.notes }}</p>
+            </div>
+            {% endif %}
+
+            <div class="mt-5 pt-4 text-xs" style="border-top: 1px solid var(--border); color: var(--text-muted);">
+                Added {{ person.created_at.strftime('%d %b %Y') if person.created_at else 'Unknown' }}
+                {% if person.last_contact_date %}
+                &middot; Last contact {{ person.last_contact_date.strftime('%d %b %Y') if person.last_contact_date else '' }}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Job Context Card -->
+        {% if job %}
+        <div class="card p-6">
+            <h3 class="text-xs font-semibold uppercase tracking-wider mb-4" style="color: var(--text-muted);">Target Role</h3>
+            <div class="space-y-3">
+                <div>
+                    <p class="font-semibold" style="color: var(--text-primary);">{{ job.role }}</p>
+                    <p class="text-sm" style="color: var(--text-muted);">{{ job.company }} &middot; {{ job.location or 'Location TBD' }}</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="badge badge-{{ job.status }}">{{ job.status | replace('_', ' ') | title }}</span>
+                    {% if job.fit_score %}
+                    <span class="inline-flex items-center gap-1 text-xs font-semibold font-data"
+                        style="{% if job.fit_score >= 8 %}color: var(--success){% elif job.fit_score >= 5 %}color: var(--warning){% else %}color: var(--text-muted){% endif %}">
+                        <i data-lucide="star" style="width:12px;height:12px;"></i>
+                        {{ job.fit_score }}/10
+                    </span>
+                    {% endif %}
+                    {% if job.is_tier1 %}
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold" style="background: var(--warning-soft); color: var(--warning);">
+                        Tier 1
+                    </span>
+                    {% endif %}
+                </div>
+                {% if job.application_link %}
+                <a href="{{ job.application_link }}" target="_blank" class="inline-flex items-center gap-2 mt-2 px-4 py-2 rounded-lg text-sm font-medium text-white transition-all hover:shadow-md"
+                   style="background: var(--accent-gradient);">
+                    <i data-lucide="external-link" style="width:14px;height:14px;"></i> Apply Now
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Quick Stats -->
+        <div class="card p-6">
+            <h3 class="text-xs font-semibold uppercase tracking-wider mb-4" style="color: var(--text-muted);">Activity Summary</h3>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="text-center p-3 rounded-lg" style="background: var(--bg-secondary);">
+                    <p class="text-2xl font-bold font-data" style="color: var(--text-primary);">{{ outreach | length }}</p>
+                    <p class="text-xs mt-1" style="color: var(--text-muted);">Messages</p>
+                </div>
+                <div class="text-center p-3 rounded-lg" style="background: var(--bg-secondary);">
+                    <p class="text-2xl font-bold font-data" style="color: var(--text-primary);">{{ responses | length }}</p>
+                    <p class="text-xs mt-1" style="color: var(--text-muted);">Responses</p>
+                </div>
+                <div class="text-center p-3 rounded-lg" style="background: var(--bg-secondary);">
+                    <p class="text-2xl font-bold font-data" style="color: var(--text-primary);">{{ outreach | selectattr('status', 'eq', 'sent') | list | length }}</p>
+                    <p class="text-xs mt-1" style="color: var(--text-muted);">Sent</p>
+                </div>
+                <div class="text-center p-3 rounded-lg" style="background: var(--bg-secondary);">
+                    <p class="text-2xl font-bold font-data" style="color: var(--text-primary);">{{ outreach | selectattr('status', 'eq', 'replied') | list | length }}</p>
+                    <p class="text-xs mt-1" style="color: var(--text-muted);">Replied</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT COLUMN: CRM Timeline -->
+    <div class="lg:col-span-2">
+        <div class="card p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-lg font-bold" style="color: var(--text-primary);">Activity Timeline</h2>
+                <span class="text-sm" style="color: var(--text-muted);">{{ timeline | length }} events</span>
+            </div>
+
+            {% if timeline %}
+            <div class="relative">
+                <!-- Vertical line -->
+                <div class="absolute left-6 top-0 bottom-0 w-0.5" style="background: var(--border);"></div>
+
+                <div class="space-y-0">
+                    {% for event in timeline %}
+                    <div class="relative flex gap-4 pb-8 last:pb-0 group">
+                        <!-- Timeline dot -->
+                        {% set dot_colors = {
+                            'blue': 'var(--info-soft)',
+                            'green': 'var(--success-soft)',
+                            'emerald': 'var(--success-soft)',
+                            'purple': 'rgba(124,58,237,0.1)',
+                            'amber': 'var(--warning-soft)',
+                            'red': 'var(--danger-soft)',
+                            'gray': 'var(--bg-secondary)'
+                        } %}
+                        {% set icon_colors = {
+                            'blue': 'var(--info)',
+                            'green': 'var(--success)',
+                            'emerald': 'var(--success)',
+                            'purple': '#7c3aed',
+                            'amber': 'var(--warning)',
+                            'red': 'var(--danger)',
+                            'gray': 'var(--text-muted)'
+                        } %}
+                        <div class="relative z-10 flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center shadow-sm" style="background: {{ dot_colors.get(event.color, 'var(--bg-secondary)') }}; border: 2px solid var(--bg-surface);">
+                            {% if event.icon == 'person' %}
+                            <i data-lucide="user-plus" style="width:18px;height:18px;color:{{ icon_colors.get(event.color, 'var(--text-muted)') }};"></i>
+                            {% elif event.icon == 'edit' %}
+                            <i data-lucide="file-edit" style="width:18px;height:18px;color:{{ icon_colors.get(event.color, 'var(--text-muted)') }};"></i>
+                            {% elif event.icon == 'check' %}
+                            <i data-lucide="check-circle" style="width:18px;height:18px;color:{{ icon_colors.get(event.color, 'var(--text-muted)') }};"></i>
+                            {% elif event.icon == 'send' %}
+                            <i data-lucide="send" style="width:18px;height:18px;color:{{ icon_colors.get(event.color, 'var(--text-muted)') }};"></i>
+                            {% elif event.icon == 'repeat' %}
+                            <i data-lucide="refresh-cw" style="width:18px;height:18px;color:{{ icon_colors.get(event.color, 'var(--text-muted)') }};"></i>
+                            {% elif event.icon == 'reply' %}
+                            <i data-lucide="reply" style="width:18px;height:18px;color:{{ icon_colors.get(event.color, 'var(--text-muted)') }};"></i>
+                            {% else %}
+                            <i data-lucide="clock" style="width:18px;height:18px;color:{{ icon_colors.get(event.color, 'var(--text-muted)') }};"></i>
+                            {% endif %}
+                        </div>
+
+                        <!-- Content -->
+                        <div class="flex-1 min-w-0 pt-1.5">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <p class="font-semibold text-sm" style="color: var(--text-primary);">{{ event.title }}</p>
+                                    <p class="text-sm mt-0.5" style="color: var(--text-muted);">{{ event.desc }}</p>
+                                </div>
+                                <span class="text-xs whitespace-nowrap flex-shrink-0" style="color: var(--text-muted);">
+                                    {% if event.date %}
+                                    {{ event.date.strftime('%d %b %Y, %H:%M') }}
+                                    {% else %}
+                                    —
+                                    {% endif %}
+                                </span>
+                            </div>
+
+                            <!-- If sent message, show expandable body -->
+                            {% if event.type == 'sent' %}
+                            {% for o in outreach %}
+                            {% if o.sent_at == event.date and o.message_body %}
+                            <div class="mt-3">
+                                <button onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('span').textContent = this.nextElementSibling.classList.contains('hidden') ? 'Show message' : 'Hide message'"
+                                        class="text-xs font-medium" style="color: var(--accent);">
+                                    <span>Show message</span> &darr;
+                                </button>
+                                <div class="hidden mt-2 p-3 rounded-lg text-sm leading-relaxed" style="background: var(--bg-secondary); border-left: 3px solid var(--accent); color: var(--text-secondary);">
+                                    {{ o.message_body }}
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center py-16">
+                <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style="background: var(--bg-secondary);">
+                    <i data-lucide="clock" style="width:28px;height:28px;color:var(--text-muted);"></i>
+                </div>
+                <p class="font-medium" style="color: var(--text-muted);">No activity yet</p>
+                <p class="text-sm mt-1" style="color: var(--text-muted);">Events will appear here as you interact with this contact</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Outreach Messages -->
+        {% if outreach %}
+        <div class="card p-6 mt-5">
+            <h2 class="text-lg font-bold mb-5" style="color: var(--text-primary);">All Messages</h2>
+            <div class="space-y-4">
+                {% for o in outreach %}
+                <div class="p-4 rounded-xl transition-colors" style="background: var(--bg-secondary); border: 1px solid var(--border);">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold" style="color: #7c3aed;">{{ o.variant }}</span>
+                            <span style="color: var(--text-muted);">&middot;</span>
+                            <span class="text-xs" style="color: var(--text-muted);">{{ o.style }}</span>
+                            <span style="color: var(--text-muted);">&middot;</span>
+                            <span class="text-xs" style="color: var(--text-muted);">{{ o.channel }}</span>
+                        </div>
+                        <span class="badge badge-{{ o.status }}">{{ o.status }}</span>
+                    </div>
+                    <p class="text-sm leading-relaxed" style="color: var(--text-secondary);">{{ o.message_body or 'No message body' }}</p>
+                    <div class="flex items-center gap-4 mt-3 text-xs" style="color: var(--text-muted);">
+                        <span>Created: {{ o.created_at.strftime('%d %b %Y') if o.created_at else '-' }}</span>
+                        {% if o.sent_at %}
+                        <span>Sent: {{ o.sent_at.strftime('%d %b %Y') }}</span>
+                        {% endif %}
+                        {% if o.follow_up_date %}
+                        <span>Follow-up: {{ o.follow_up_date.strftime('%d %b') if o.follow_up_date else '-' }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.lucide) lucide.createIcons();
+});
+</script>
+{% endblock %}

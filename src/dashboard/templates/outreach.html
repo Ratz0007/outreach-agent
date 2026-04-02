@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+{% set active = "outreach" %}
+{% block title %}Outreach — Outreach Agent{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold" style="color: var(--text-primary);">Outreach Log</h1>
+        <p class="text-sm mt-1" style="color: var(--text-muted);">{{ outreach|length }} messages</p>
+    </div>
+    <div class="flex gap-2 flex-wrap">
+        <a href="/outreach" class="btn {% if not current_status %}btn-primary{% else %}btn-secondary{% endif %}" style="font-size:12px;padding:5px 14px;">All</a>
+        <a href="/outreach?status=draft" class="btn {% if current_status == 'draft' %}btn-primary{% else %}btn-secondary{% endif %}" style="font-size:12px;padding:5px 14px;">
+            <i data-lucide="file-edit" style="width:12px;height:12px;"></i> Drafts
+        </a>
+        <a href="/outreach?status=approved" class="btn {% if current_status == 'approved' %}btn-primary{% else %}btn-secondary{% endif %}" style="font-size:12px;padding:5px 14px;">
+            <i data-lucide="check-circle" style="width:12px;height:12px;"></i> Approved
+        </a>
+        <a href="/outreach?status=sent" class="btn {% if current_status == 'sent' %}btn-primary{% else %}btn-secondary{% endif %}" style="font-size:12px;padding:5px 14px;">
+            <i data-lucide="send" style="width:12px;height:12px;"></i> Sent
+        </a>
+        <a href="/outreach?status=replied" class="btn {% if current_status == 'replied' %}btn-primary{% else %}btn-secondary{% endif %}" style="font-size:12px;padding:5px 14px;">
+            <i data-lucide="message-circle" style="width:12px;height:12px;"></i> Replied
+        </a>
+        {% if current_status == 'draft' %}
+        <form method="post" action="/outreach/approve-all" class="inline">
+            <button type="submit" class="btn btn-success" style="font-size:12px;padding:5px 14px;">
+                <i data-lucide="check-check" style="width:12px;height:12px;"></i> Approve All
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Search & Filters -->
+<div class="card p-4 mb-5">
+    <div class="flex gap-3 flex-wrap items-center">
+        <div class="flex-1" style="min-width:200px;position:relative;">
+            <i data-lucide="search" style="width:14px;height:14px;position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none;"></i>
+            <input type="text" id="outreach-search" class="input w-full" placeholder="Search person, company, message..." oninput="filterOutreach()" style="padding-left:34px;">
+        </div>
+        <select id="filter-variant" class="input" onchange="filterOutreach()">
+            <option value="">All Variants</option>
+            {% for v in ['V1','V2','V3','V4','V5','V6','V7','V8','V9','V10'] %}
+            <option value="{{ v }}">{{ v }}</option>
+            {% endfor %}
+        </select>
+        <select id="filter-style" class="input" onchange="filterOutreach()">
+            <option value="">All Styles</option>
+            <option value="referral">Referral</option>
+            <option value="value_first">Value First</option>
+            <option value="conversational">Conversational</option>
+        </select>
+        <select id="filter-channel" class="input" onchange="filterOutreach()">
+            <option value="">All Channels</option>
+            <option value="linkedin">LinkedIn</option>
+            <option value="email">Email</option>
+        </select>
+    </div>
+</div>
+
+<div id="outreach-list">
+{% for o in outreach %}
+<div class="card p-5 mb-3 outreach-card"
+     data-id="{{ o.id }}"
+     data-person="{{ o.person_name|lower }}"
+     data-company="{{ o.company|lower }}"
+     data-message="{{ o.message|lower if o.message else '' }}"
+     data-variant="{{ o.variant }}"
+     data-style="{{ o.style }}"
+     data-channel="{{ o.channel }}">
+    <div class="flex justify-between items-start mb-2">
+        <div class="flex items-center gap-2 flex-wrap">
+            {% if o.linkedin_url %}
+            <a href="{{ o.linkedin_url }}" target="_blank" class="flex items-center gap-1.5 hover:opacity-80">
+                <span class="li-icon" style="width:18px;height:18px;border-radius:4px;">
+                    <svg width="10" height="10" fill="white" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                </span>
+                <span class="font-semibold" style="color: var(--text-primary);">{{ o.person_name }}</span>
+            </a>
+            {% else %}
+            <span class="font-semibold" style="color: var(--text-primary);">{{ o.person_name }}</span>
+            {% endif %}
+            <span style="color: var(--text-muted);">@ {{ o.company }}</span>
+            {% if o.person_title %}<span class="text-xs" style="color: var(--text-muted);">({{ o.person_title }})</span>{% endif %}
+            <span style="color: var(--border);">|</span>
+            <span class="text-sm" style="color: var(--text-muted);">{{ o.job_role }}</span>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+            <span class="badge badge-{{ o.status }}">{{ o.status }}</span>
+            <span class="text-xs font-medium" style="color: #7c3aed;">{{ o.variant }}</span>
+            <span class="badge {% if o.style == 'referral' %}badge-shortlisted{% elif o.style == 'value_first' %}badge-sent{% else %}badge-applied{% endif %}" style="font-size:10px;">{{ o.style|replace('_',' ') }}</span>
+            <span class="text-xs" style="color: var(--text-muted);">{{ o.channel }}</span>
+        </div>
+    </div>
+
+    {% if o.person_email %}
+    <div class="text-xs mb-2">
+        <a href="mailto:{{ o.person_email }}" style="color: var(--accent);">{{ o.person_email }}</a>
+    </div>
+    {% endif %}
+
+    <div class="rounded-xl p-4 mb-3 text-sm leading-relaxed" style="background: var(--bg-secondary); border-left: 3px solid var(--accent); color: var(--text-secondary);">
+        {{ o.message }}
+    </div>
+
+    <div class="flex justify-between items-center">
+        <div class="text-xs" style="color: var(--text-muted);">
+            {% if o.sent_at %}Sent: {{ o.sent_at.strftime('%b %d, %H:%M') }}{% endif %}
+            {% if o.follow_up_date %} | Follow-up: {{ o.follow_up_date }}{% endif %}
+        </div>
+        <div class="flex gap-2">
+            {% if o.status == 'draft' %}
+            <button onclick="openEditModal({{ o.id }}, '{{ o.person_name|replace("'", "\\'") }}', '{{ o.company|replace("'", "\\'") }}', '{{ o.variant }}', '{{ o.style }}', '{{ o.channel }}', this.closest('.card').querySelector('[style*=&quot;border-left&quot;]').innerText)" class="btn btn-secondary" style="font-size:12px;padding:5px 14px;">
+                <i data-lucide="pencil" style="width:12px;height:12px;"></i> Edit
+            </button>
+            <form method="post" action="/outreach/{{ o.id }}/approve" class="inline">
+                <button type="submit" class="btn btn-primary" style="font-size:12px;padding:5px 14px;">
+                    <i data-lucide="check" style="width:12px;height:12px;"></i> Approve
+                </button>
+            </form>
+            {% elif o.status == 'approved' %}
+            <form method="post" action="/outreach/{{ o.id }}/send" class="inline">
+                <button type="submit" class="btn btn-success" style="font-size:12px;padding:5px 14px;">
+                    <i data-lucide="send" style="width:12px;height:12px;"></i>
+                    {% if o.channel == 'email' %}Send Email{% else %}Mark Sent{% endif %}
+                </button>
+            </form>
+            {% if o.channel != 'email' %}
+            <button onclick="copyMsg(this)" class="btn btn-secondary" style="font-size:12px;padding:5px 14px;">
+                <i data-lucide="copy" style="width:12px;height:12px;"></i> Copy
+            </button>
+            {% endif %}
+            {% endif %}
+            {% if o.linkedin_url %}
+            <a href="{{ o.linkedin_url }}" target="_blank" class="btn btn-secondary" style="font-size:12px;padding:5px 14px;">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                Profile
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endfor %}
+</div>
+
+{% if not outreach %}
+<div class="card p-8 text-center" style="color: var(--text-muted);">
+    <i data-lucide="mail-x" style="width:32px;height:32px;margin:0 auto 12px;display:block;color:var(--text-muted);"></i>
+    No outreach messages found. Generate drafts first.
+</div>
+{% endif %}
+
+<div class="text-sm mt-3" style="color: var(--text-muted);" id="outreach-count">{{ outreach|length }} messages</div>
+
+<!-- Edit Draft Modal -->
+<div id="edit-modal-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);align-items:center;justify-content:center;" onclick="if(event.target===this)closeEditModal()">
+    <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-xl);width:640px;max-width:95vw;max-height:85vh;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden;">
+        <!-- Header -->
+        <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+            <div>
+                <h3 style="font-size:16px;font-weight:600;color:var(--text-primary);margin:0;">Edit Draft</h3>
+                <p id="edit-modal-subtitle" style="font-size:12px;color:var(--text-muted);margin-top:2px;"></p>
+            </div>
+            <button onclick="closeEditModal()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px;" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-muted)'">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <!-- Meta info -->
+        <div style="padding:12px 24px;background:var(--bg-secondary);display:flex;gap:16px;flex-wrap:wrap;font-size:12px;">
+            <span id="edit-meta-person" style="color:var(--text-secondary);"></span>
+            <span id="edit-meta-variant" style="color:#7c3aed;font-weight:600;"></span>
+            <span id="edit-meta-channel" style="color:var(--text-muted);"></span>
+            <span id="edit-meta-company-intel" style="color:var(--accent);font-weight:500;"></span>
+        </div>
+        <!-- Editor -->
+        <div style="padding:20px 24px;flex:1;overflow-y:auto;">
+            <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:8px;">Message</label>
+            <textarea id="edit-modal-textarea" style="width:100%;min-height:180px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;color:var(--text-primary);font-size:13px;line-height:1.6;resize:vertical;outline:none;font-family:'Plus Jakarta Sans',sans-serif;" onfocus="this.style.borderColor='var(--accent)';this.style.boxShadow='0 0 0 3px var(--accent-soft)'" onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'" oninput="updateCharCount()"></textarea>
+            <div style="display:flex;justify-content:space-between;margin-top:8px;">
+                <span id="edit-char-count" style="font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;"></span>
+                <span style="font-size:11px;color:var(--text-muted);">Recommended: under 100 words</span>
+            </div>
+        </div>
+        <!-- Actions -->
+        <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+            <button onclick="regenerateWithSage()" class="btn btn-secondary" style="font-size:12px;">
+                <i data-lucide="sparkles" style="width:14px;height:14px;"></i> Ask Sage to Rewrite
+            </button>
+            <div style="display:flex;gap:8px;">
+                <button onclick="closeEditModal()" class="btn btn-secondary" style="font-size:12px;">Cancel</button>
+                <button onclick="saveEditedDraft()" class="btn btn-primary" style="font-size:12px;">
+                    <i data-lucide="check" style="width:14px;height:14px;"></i> Save Draft
+                </button>
+                <button onclick="saveAndApproveDraft()" class="btn btn-success" style="font-size:12px;">
+                    <i data-lucide="check-check" style="width:14px;height:14px;"></i> Save & Approve
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+var editingOutreachId = null;
+
+function copyMsg(btn) {
+    const msgEl = btn.closest('.card').querySelector('[style*="border-left"]');
+    navigator.clipboard.writeText(msgEl.innerText).then(() => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i data-lucide="check" style="width:12px;height:12px;"></i> Copied!';
+        if (window.toast) window.toast.success('Message copied to clipboard');
+        setTimeout(() => { btn.innerHTML = orig; if (window.lucide) lucide.createIcons(); }, 1500);
+    });
+}
+
+function openEditModal(id, person, company, variant, style, channel, message) {
+    editingOutreachId = id;
+    document.getElementById('edit-modal-subtitle').textContent = person + ' @ ' + company;
+    document.getElementById('edit-meta-person').textContent = person;
+    document.getElementById('edit-meta-variant').textContent = variant + ' (' + style.replace('_', ' ') + ')';
+    document.getElementById('edit-meta-channel').textContent = 'via ' + channel;
+    document.getElementById('edit-modal-textarea').value = message;
+    document.getElementById('edit-modal-overlay').style.display = 'flex';
+    updateCharCount();
+
+    // Fetch company intelligence
+    fetch('/api/company/' + encodeURIComponent(company) + '/intelligence')
+        .then(r => r.json())
+        .then(data => {
+            var ratio = data.ratio || '0/0';
+            var rec = data.recommendation || '';
+            document.getElementById('edit-meta-company-intel').textContent =
+                ratio + ' contacted | ' + rec;
+        })
+        .catch(() => {});
+
+    // Focus textarea
+    setTimeout(() => document.getElementById('edit-modal-textarea').focus(), 100);
+}
+
+function closeEditModal() {
+    document.getElementById('edit-modal-overlay').style.display = 'none';
+    editingOutreachId = null;
+}
+
+function updateCharCount() {
+    var text = document.getElementById('edit-modal-textarea').value;
+    var words = text.trim().split(/\s+/).filter(w => w).length;
+    var chars = text.length;
+    var el = document.getElementById('edit-char-count');
+    el.textContent = chars + ' chars · ' + words + ' words';
+    el.style.color = words > 100 ? 'var(--warning)' : 'var(--text-muted)';
+}
+
+function saveEditedDraft() {
+    if (!editingOutreachId) return;
+    var msg = document.getElementById('edit-modal-textarea').value.trim();
+    if (!msg) { window.toast.error('Message cannot be empty'); return; }
+
+    fetch('/api/outreach/' + editingOutreachId + '/edit', {
+        method: 'PATCH',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({message: msg}),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            window.toast.success('Draft saved!');
+            // Update the message in the DOM
+            var card = document.querySelector('.outreach-card[data-id="' + editingOutreachId + '"]');
+            if (card) {
+                var msgEl = card.querySelector('[style*="border-left"]');
+                if (msgEl) msgEl.textContent = msg;
+                card.dataset.message = msg.toLowerCase();
+            }
+            closeEditModal();
+        } else {
+            window.toast.error(data.error || 'Failed to save');
+        }
+    })
+    .catch(e => window.toast.error('Network error: ' + e));
+}
+
+function saveAndApproveDraft() {
+    if (!editingOutreachId) return;
+    var msg = document.getElementById('edit-modal-textarea').value.trim();
+    if (!msg) { window.toast.error('Message cannot be empty'); return; }
+
+    // Save first, then approve
+    fetch('/api/outreach/' + editingOutreachId + '/edit', {
+        method: 'PATCH',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({message: msg}),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            // Now approve
+            return fetch('/api/outreach/' + editingOutreachId + '/status', {
+                method: 'PATCH',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({status: 'approved'}),
+            });
+        }
+        throw new Error(data.error || 'Save failed');
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            window.toast.success('Draft saved & approved!');
+            closeEditModal();
+            setTimeout(() => window.location.reload(), 500);
+        } else {
+            window.toast.error(data.error || 'Approve failed');
+        }
+    })
+    .catch(e => window.toast.error('' + e));
+}
+
+function regenerateWithSage() {
+    // Open Sage chat with a rewrite request
+    var person = document.getElementById('edit-meta-person').textContent;
+    var variant = document.getElementById('edit-meta-variant').textContent;
+    window.toast.info('Opening Sage to rewrite...');
+    closeEditModal();
+    // Trigger Sage chat
+    if (window.openSageChat) {
+        window.openSageChat('Rewrite the draft for ' + person + ' (ID:' + editingOutreachId + '). Make it more natural and compelling. Current variant: ' + variant);
+    }
+}
+
+function filterOutreach() {
+    const q = document.getElementById('outreach-search').value.toLowerCase();
+    const variant = document.getElementById('filter-variant').value;
+    const style = document.getElementById('filter-style').value;
+    const channel = document.getElementById('filter-channel').value;
+    let visible = 0;
+
+    document.querySelectorAll('.outreach-card').forEach(card => {
+        const d = card.dataset;
+        const matchSearch = !q || d.person.includes(q) || d.company.includes(q) || d.message.includes(q);
+        const matchVariant = !variant || d.variant === variant;
+        const matchStyle = !style || d.style === style;
+        const matchChannel = !channel || d.channel.includes(channel);
+        const show = matchSearch && matchVariant && matchStyle && matchChannel;
+        card.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+    document.getElementById('outreach-count').textContent = visible + ' messages';
+}
+
+// Handle Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && editingOutreachId) closeEditModal();
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.lucide) lucide.createIcons();
+});
+</script>
+{% endblock %}

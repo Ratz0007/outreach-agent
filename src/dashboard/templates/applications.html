@@ -1,0 +1,861 @@
+{% extends "base.html" %}
+{% set active = "applications" %}
+{% block title %}Applications — Outreach Agent{% endblock %}
+
+{% block content %}
+<style>
+/* ── Applications page styles ───────────────────────────────────── */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+}
+.kpi-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.kpi-card .kpi-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.1;
+}
+.kpi-card .kpi-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.kpi-card .kpi-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 6px;
+}
+
+/* Portal cards */
+.portal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+    margin-bottom: 28px;
+}
+.portal-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    padding: 18px;
+    transition: all 0.15s;
+}
+.portal-card:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-md);
+}
+.portal-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.portal-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent-soft);
+    color: var(--accent);
+    flex-shrink: 0;
+}
+.portal-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.portal-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+.support-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.support-badge.full {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+}
+.support-badge.partial {
+    background: rgba(234, 179, 8, 0.15);
+    color: #eab308;
+}
+.support-badge.manual {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+.capability-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 10px;
+}
+.capability-tag {
+    font-size: 0.65rem;
+    padding: 2px 7px;
+    border-radius: var(--radius-md);
+    background: var(--bg-secondary);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+.capability-tag.active {
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+.capability-tag i {
+    width: 10px;
+    height: 10px;
+}
+
+/* Applications table */
+.app-table-wrap {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+}
+.app-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.app-table th {
+    text-align: left;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-secondary);
+}
+.app-table td {
+    padding: 12px 16px;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+.app-table tr:last-child td {
+    border-bottom: none;
+}
+.app-table tr:hover td {
+    background: var(--bg-secondary);
+}
+.app-company {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.85rem;
+}
+.app-role {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 1px;
+}
+
+/* Status badges */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 9999px;
+}
+.status-badge.pending {
+    background: rgba(107, 114, 128, 0.15);
+    color: var(--text-muted);
+}
+.status-badge.in_progress {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+}
+.status-badge.completed {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+}
+.status-badge.blocked, .status-badge.manual_needed {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+
+/* Progress bar */
+.step-progress {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.step-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--bg-secondary);
+    border-radius: 3px;
+    overflow: hidden;
+    min-width: 60px;
+}
+.step-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s;
+    background: var(--accent);
+}
+.step-bar-fill.blocked {
+    background: #ef4444;
+}
+.step-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+/* Blocked callout */
+.blocked-callout {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    border-radius: var(--radius-md);
+    padding: 4px 10px;
+    font-size: 0.72rem;
+    color: #ef4444;
+    font-weight: 500;
+}
+.blocked-callout i {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+/* Action buttons */
+.app-actions {
+    display: flex;
+    gap: 6px;
+}
+.app-action-btn {
+    font-size: 0.7rem;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.app-action-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-soft);
+}
+.app-action-btn.primary {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+.app-action-btn.primary:hover {
+    opacity: 0.9;
+}
+
+/* Detail modal */
+.app-detail-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+.app-detail-overlay.open {
+    display: flex;
+}
+.app-detail-panel {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    width: 100%;
+    max-width: 640px;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 28px;
+    box-shadow: var(--shadow-xl);
+}
+.app-detail-panel h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+.detail-section {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+.detail-section-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 10px;
+}
+
+/* Timeline */
+.timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+.timeline-item {
+    display: flex;
+    gap: 12px;
+    position: relative;
+    padding-bottom: 16px;
+}
+.timeline-item:last-child {
+    padding-bottom: 0;
+}
+.timeline-dot-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 20px;
+    flex-shrink: 0;
+}
+.timeline-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--border);
+    flex-shrink: 0;
+    z-index: 1;
+}
+.timeline-dot.done {
+    background: #22c55e;
+}
+.timeline-dot.current {
+    background: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.timeline-dot.blocked {
+    background: #ef4444;
+}
+.timeline-line {
+    width: 2px;
+    flex: 1;
+    background: var(--border);
+    margin-top: 2px;
+}
+.timeline-content {
+    flex: 1;
+    min-width: 0;
+}
+.timeline-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+.timeline-meta {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 60px 24px;
+}
+.empty-state-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-xl);
+    background: var(--accent-soft);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+}
+.empty-state h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+}
+.empty-state p {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    max-width: 380px;
+    margin: 0 auto;
+    line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .portal-grid { grid-template-columns: 1fr; }
+    .app-table-wrap { overflow-x: auto; }
+    .app-table { min-width: 700px; }
+}
+</style>
+
+<!-- ── Breadcrumb ──────────────────────────────────────────────────── -->
+{% block breadcrumb %}
+<nav class="flex items-center gap-2 text-xs" style="color: var(--text-muted);">
+    <a href="/" style="color: var(--text-muted); text-decoration: none;">Dashboard</a>
+    <span>/</span>
+    <span style="color: var(--text-primary); font-weight: 500;">Applications</span>
+</nav>
+{% endblock %}
+
+<!-- ── Page Header ─────────────────────────────────────────────────── -->
+<div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+    <div>
+        <h1 class="text-xl font-bold" style="color: var(--text-primary);">Applications</h1>
+        <p class="text-xs mt-1" style="color: var(--text-muted);">Track auto-applied and manual applications across all portals</p>
+    </div>
+</div>
+
+<!-- ── KPI Cards ───────────────────────────────────────────────────── -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: var(--accent-soft); color: var(--accent);">
+            <i data-lucide="layers" style="width:16px;height:16px;"></i>
+        </div>
+        <div class="kpi-value">{{ stats.total }}</div>
+        <div class="kpi-label">Total Applications</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: rgba(34,197,94,0.12); color: #22c55e;">
+            <i data-lucide="zap" style="width:16px;height:16px;"></i>
+        </div>
+        <div class="kpi-value">{{ stats.completed }}</div>
+        <div class="kpi-label">Auto-Applied</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: rgba(234,179,8,0.12); color: #eab308;">
+            <i data-lucide="clock" style="width:16px;height:16px;"></i>
+        </div>
+        <div class="kpi-value">{{ stats.pending + stats.in_progress }}</div>
+        <div class="kpi-label">Manual Pending</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: rgba(239,68,68,0.12); color: #ef4444;">
+            <i data-lucide="alert-triangle" style="width:16px;height:16px;"></i>
+        </div>
+        <div class="kpi-value">{{ stats.blocked }}</div>
+        <div class="kpi-label">Blocked</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: rgba(139,92,246,0.12); color: #8b5cf6;">
+            <i data-lucide="message-circle" style="width:16px;height:16px;"></i>
+        </div>
+        <div class="kpi-value">{{ stats.get('interviews', 0) }}</div>
+        <div class="kpi-label">Interviews</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon" style="background: rgba(16,185,129,0.12); color: #10b981;">
+            <i data-lucide="trophy" style="width:16px;height:16px;"></i>
+        </div>
+        <div class="kpi-value">{{ stats.get('offers', 0) }}</div>
+        <div class="kpi-label">Offers</div>
+    </div>
+</div>
+
+<!-- ── Portal Breakdown ────────────────────────────────────────────── -->
+{% if portals %}
+<div class="mb-2">
+    <h2 class="text-sm font-semibold mb-3" style="color: var(--text-primary);">Application Portals</h2>
+</div>
+<div class="portal-grid">
+    {% for portal in portals %}
+    <div class="portal-card">
+        <div class="portal-header">
+            <div class="portal-icon">
+                {% if portal.portal_name == 'linkedin' %}
+                    <i data-lucide="linkedin" style="width:18px;height:18px;"></i>
+                {% elif portal.portal_name == 'indeed' %}
+                    <i data-lucide="search" style="width:18px;height:18px;"></i>
+                {% elif portal.portal_name == 'greenhouse' %}
+                    <i data-lucide="leaf" style="width:18px;height:18px;"></i>
+                {% elif portal.portal_name == 'lever' %}
+                    <i data-lucide="toggle-right" style="width:18px;height:18px;"></i>
+                {% elif portal.portal_name == 'workday' %}
+                    <i data-lucide="building-2" style="width:18px;height:18px;"></i>
+                {% else %}
+                    <i data-lucide="globe" style="width:18px;height:18px;"></i>
+                {% endif %}
+            </div>
+            <div>
+                <div class="portal-name">{{ portal.display_name or portal.portal_name|capitalize }}</div>
+                <div class="portal-count">
+                    {{ applications|selectattr("portal", "equalto", portal.portal_name)|list|length }} applications
+                </div>
+            </div>
+            <div class="ml-auto">
+                {% if portal.support_level == 'full' %}
+                    <span class="support-badge full">Full</span>
+                {% elif portal.support_level == 'partial' %}
+                    <span class="support-badge partial">Partial</span>
+                {% else %}
+                    <span class="support-badge manual">Manual</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="capability-list">
+            <span class="capability-tag {{ 'active' if portal.can_detect_listings else '' }}">
+                <i data-lucide="{{ 'check' if portal.can_detect_listings else 'x' }}" style="width:10px;height:10px;"></i>
+                Detect
+            </span>
+            <span class="capability-tag {{ 'active' if portal.can_extract_details else '' }}">
+                <i data-lucide="{{ 'check' if portal.can_extract_details else 'x' }}" style="width:10px;height:10px;"></i>
+                Extract
+            </span>
+            <span class="capability-tag {{ 'active' if portal.can_auto_apply else '' }}">
+                <i data-lucide="{{ 'check' if portal.can_auto_apply else 'x' }}" style="width:10px;height:10px;"></i>
+                Auto-Apply
+            </span>
+            <span class="capability-tag {{ 'active' if portal.can_track_status else '' }}">
+                <i data-lucide="{{ 'check' if portal.can_track_status else 'x' }}" style="width:10px;height:10px;"></i>
+                Track
+            </span>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- ── Applications Table ──────────────────────────────────────────── -->
+<div class="mb-2">
+    <h2 class="text-sm font-semibold mb-3" style="color: var(--text-primary);">All Applications</h2>
+</div>
+
+{% if applications %}
+<div class="app-table-wrap">
+    <table class="app-table">
+        <thead>
+            <tr>
+                <th>Company / Role</th>
+                <th>Portal</th>
+                <th>Status</th>
+                <th>Progress</th>
+                <th>Blocked</th>
+                <th>Last Action</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for app in applications %}
+            <tr>
+                <td>
+                    <div class="app-company">{{ app.company }}</div>
+                    <div class="app-role">{{ app.role }}</div>
+                </td>
+                <td>
+                    <span class="capability-tag active" style="font-size:0.72rem;">
+                        {{ app.portal|capitalize if app.portal else 'Unknown' }}
+                    </span>
+                </td>
+                <td>
+                    {% set st = app.portal_status or 'pending' %}
+                    <span class="status-badge {{ st }}">
+                        {% if st == 'completed' %}
+                            <i data-lucide="check-circle" style="width:12px;height:12px;"></i>
+                        {% elif st == 'in_progress' %}
+                            <i data-lucide="loader" style="width:12px;height:12px;"></i>
+                        {% elif st == 'blocked' or st == 'manual_needed' %}
+                            <i data-lucide="alert-circle" style="width:12px;height:12px;"></i>
+                        {% else %}
+                            <i data-lucide="circle" style="width:12px;height:12px;"></i>
+                        {% endif %}
+                        {{ st|replace('_', ' ')|capitalize }}
+                    </span>
+                </td>
+                <td>
+                    {% set done = app.steps_completed|length %}
+                    {% set remaining = app.steps_remaining|length %}
+                    {% set total = done + remaining %}
+                    <div class="step-progress">
+                        <div class="step-bar">
+                            <div class="step-bar-fill {{ 'blocked' if app.blocked_reason else '' }}"
+                                 style="width: {{ (done / total * 100) if total > 0 else 0 }}%;"></div>
+                        </div>
+                        <span class="step-label">{{ done }}/{{ total }}</span>
+                    </div>
+                </td>
+                <td>
+                    {% if app.blocked_reason %}
+                        <div class="blocked-callout">
+                            <i data-lucide="alert-triangle"></i>
+                            <span>{{ app.blocked_reason|truncate(40) }}</span>
+                        </div>
+                    {% else %}
+                        <span style="color: var(--text-muted); font-size: 0.75rem;">--</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div style="font-size: 0.78rem; color: var(--text-secondary);">
+                        {{ app.last_action or 'None' }}
+                    </div>
+                    {% if app.last_action_at %}
+                    <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 1px;">
+                        {{ app.last_action_at.strftime('%d %b %H:%M') if app.last_action_at else '' }}
+                    </div>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="app-actions">
+                        <button class="app-action-btn" onclick="showDetail({{ app.id }})" title="View Details">
+                            <i data-lucide="eye" style="width:12px;height:12px;"></i>
+                        </button>
+                        {% if app.portal_status in ('blocked', 'manual_needed', 'in_progress') %}
+                        <button class="app-action-btn primary" onclick="continueApp({{ app.id }})" title="Continue">
+                            <i data-lucide="play" style="width:12px;height:12px;"></i>
+                        </button>
+                        {% endif %}
+                        {% if app.portal_status != 'completed' %}
+                        <button class="app-action-btn" onclick="markComplete({{ app.id }})" title="Mark Complete">
+                            <i data-lucide="check" style="width:12px;height:12px;"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<!-- Empty State -->
+<div class="card p-6">
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <i data-lucide="rocket" style="width:24px;height:24px;"></i>
+        </div>
+        <h3>No applications tracked yet</h3>
+        <p>When you start applying to jobs through the pipeline, your applications will appear here with real-time status tracking across all portals.</p>
+    </div>
+</div>
+{% endif %}
+
+<!-- ── Application Detail Modal ────────────────────────────────────── -->
+<div id="app-detail-overlay" class="app-detail-overlay" onclick="if(event.target===this)closeDetail()">
+    <div class="app-detail-panel">
+        <div class="flex items-center justify-between mb-2">
+            <div>
+                <h3 id="detail-company">Company</h3>
+                <div id="detail-role" style="font-size: 0.82rem; color: var(--text-muted);"></div>
+            </div>
+            <button onclick="closeDetail()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px;">
+                <i data-lucide="x" style="width:18px;height:18px;"></i>
+            </button>
+        </div>
+
+        <div class="flex items-center gap-3 mt-3">
+            <span id="detail-status" class="status-badge"></span>
+            <span id="detail-portal" class="capability-tag active" style="font-size:0.72rem;"></span>
+        </div>
+
+        <!-- Progress Timeline -->
+        <div class="detail-section">
+            <div class="detail-section-title">Application Progress</div>
+            <div id="detail-timeline" class="timeline"></div>
+        </div>
+
+        <!-- Documents -->
+        <div class="detail-section">
+            <div class="detail-section-title">Documents Uploaded</div>
+            <div id="detail-documents" style="font-size: 0.8rem; color: var(--text-secondary);"></div>
+        </div>
+
+        <!-- AI Summary -->
+        <div class="detail-section">
+            <div class="detail-section-title">AI Summary</div>
+            <div id="detail-summary" style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.55;"></div>
+        </div>
+
+        <!-- Next Action -->
+        <div class="detail-section">
+            <div class="detail-section-title">Recommended Next Action</div>
+            <div id="detail-next-action" style="font-size: 0.82rem; color: var(--accent); font-weight: 500;"></div>
+        </div>
+
+        <!-- Blocked reason if any -->
+        <div id="detail-blocked-section" class="detail-section" style="display:none;">
+            <div class="detail-section-title">Blocked</div>
+            <div id="detail-blocked" class="blocked-callout"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Store application data for detail view
+const appData = {};
+{% for app in applications %}
+appData[{{ app.id }}] = {
+    id: {{ app.id }},
+    company: {{ app.company|tojson }},
+    role: {{ app.role|tojson }},
+    portal: {{ (app.portal or 'unknown')|tojson }},
+    portal_status: {{ (app.portal_status or 'pending')|tojson }},
+    steps_completed: {{ app.steps_completed|tojson }},
+    steps_remaining: {{ app.steps_remaining|tojson }},
+    blocked_reason: {{ (app.blocked_reason or '')|tojson }},
+    blocked_step: {{ (app.blocked_step or '')|tojson }},
+    documents: {{ app.documents|tojson }},
+    ai_summary: {{ (app.ai_summary or 'No AI summary available yet.')|tojson }},
+    last_action: {{ (app.last_action or 'None')|tojson }},
+};
+{% endfor %}
+
+function showDetail(id) {
+    const app = appData[id];
+    if (!app) return;
+
+    document.getElementById('detail-company').textContent = app.company;
+    document.getElementById('detail-role').textContent = app.role;
+    document.getElementById('detail-portal').textContent = app.portal.charAt(0).toUpperCase() + app.portal.slice(1);
+
+    const statusEl = document.getElementById('detail-status');
+    statusEl.className = 'status-badge ' + app.portal_status;
+    statusEl.textContent = app.portal_status.replace('_', ' ').replace(/^\w/, c => c.toUpperCase());
+
+    // Build timeline
+    const timelineEl = document.getElementById('detail-timeline');
+    timelineEl.innerHTML = '';
+
+    const allSteps = [];
+    (app.steps_completed || []).forEach(s => allSteps.push({ name: s, status: 'done' }));
+    if (app.blocked_step) {
+        allSteps.push({ name: app.blocked_step, status: 'blocked' });
+        (app.steps_remaining || []).filter(s => s !== app.blocked_step).forEach(s => allSteps.push({ name: s, status: 'pending' }));
+    } else if (app.steps_remaining && app.steps_remaining.length > 0) {
+        allSteps.push({ name: app.steps_remaining[0], status: 'current' });
+        app.steps_remaining.slice(1).forEach(s => allSteps.push({ name: s, status: 'pending' }));
+    }
+
+    allSteps.forEach((step, i) => {
+        const isLast = i === allSteps.length - 1;
+        const item = document.createElement('div');
+        item.className = 'timeline-item';
+        item.innerHTML = `
+            <div class="timeline-dot-col">
+                <div class="timeline-dot ${step.status}"></div>
+                ${!isLast ? '<div class="timeline-line"></div>' : ''}
+            </div>
+            <div class="timeline-content">
+                <div class="timeline-label">${step.name}</div>
+                <div class="timeline-meta">${
+                    step.status === 'done' ? 'Completed' :
+                    step.status === 'blocked' ? 'Blocked' :
+                    step.status === 'current' ? 'In progress' : 'Pending'
+                }</div>
+            </div>`;
+        timelineEl.appendChild(item);
+    });
+
+    if (allSteps.length === 0) {
+        timelineEl.innerHTML = '<div style="font-size:0.8rem;color:var(--text-muted);">No steps recorded yet.</div>';
+    }
+
+    // Documents
+    const docsEl = document.getElementById('detail-documents');
+    if (app.documents && app.documents.length > 0) {
+        docsEl.innerHTML = app.documents.map(d =>
+            `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;"><i data-lucide="file" style="width:14px;height:14px;color:var(--accent);"></i>${d}</div>`
+        ).join('');
+    } else {
+        docsEl.textContent = 'No documents uploaded yet.';
+    }
+
+    // AI Summary
+    document.getElementById('detail-summary').textContent = app.ai_summary;
+
+    // Next action
+    const nextActionEl = document.getElementById('detail-next-action');
+    if (app.portal_status === 'blocked' || app.portal_status === 'manual_needed') {
+        nextActionEl.textContent = 'Manual intervention required: ' + (app.blocked_reason || 'Check application portal.');
+    } else if (app.portal_status === 'completed') {
+        nextActionEl.textContent = 'Application submitted. Monitor for interview invitations.';
+    } else if (app.steps_remaining && app.steps_remaining.length > 0) {
+        nextActionEl.textContent = 'Continue with: ' + app.steps_remaining[0];
+    } else {
+        nextActionEl.textContent = 'Review and submit application.';
+    }
+
+    // Blocked section
+    const blockedSection = document.getElementById('detail-blocked-section');
+    if (app.blocked_reason) {
+        blockedSection.style.display = '';
+        document.getElementById('detail-blocked').innerHTML =
+            `<i data-lucide="alert-triangle"></i><span>${app.blocked_reason}</span>`;
+    } else {
+        blockedSection.style.display = 'none';
+    }
+
+    document.getElementById('app-detail-overlay').classList.add('open');
+
+    // Re-render lucide icons inside the modal
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeDetail() {
+    document.getElementById('app-detail-overlay').classList.remove('open');
+}
+
+function continueApp(id) {
+    const app = appData[id];
+    if (app && app.application_url) {
+        window.open(app.application_url, '_blank');
+    } else {
+        showDetail(id);
+    }
+}
+
+function markComplete(id) {
+    if (!confirm('Mark this application as completed?')) return;
+    fetch(`/api/applications/${id}/complete`, { method: 'POST' })
+        .then(r => { if (r.ok) location.reload(); })
+        .catch(() => alert('Failed to update. Please try again.'));
+}
+
+// Close modal on Escape key
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDetail(); });
+</script>
+{% endblock %}

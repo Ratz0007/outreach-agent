@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% set active = "cvs" %}
+{% block title %}CVs — Outreach Agent{% endblock %}
+
+{% block content %}
+<style>
+.cv-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+}
+.cv-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    padding: 20px;
+    transition: all 0.2s;
+}
+.cv-card:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-md);
+}
+.view-toggle {
+    display: inline-flex;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--bg-secondary);
+}
+.view-toggle button {
+    padding: 6px 14px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.view-toggle button.active {
+    background: var(--bg-surface);
+    color: var(--accent);
+    box-shadow: var(--shadow-sm);
+}
+</style>
+
+<div class="flex justify-between items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold" style="color: var(--text-primary);">CV Library</h1>
+        <p class="text-sm mt-1" style="color: var(--text-muted);">{{ cvs|length }} tailored CVs generated</p>
+    </div>
+    <div class="view-toggle">
+        <button id="btn-table-cv" class="active" onclick="setCVView('table')">
+            <i data-lucide="table-2" style="width:14px;height:14px;"></i> Table
+        </button>
+        <button id="btn-card-cv" onclick="setCVView('cards')">
+            <i data-lucide="layout-grid" style="width:14px;height:14px;"></i> Cards
+        </button>
+    </div>
+</div>
+
+<!-- Search -->
+<div class="card p-4 mb-5">
+    <div class="flex gap-3 flex-wrap items-center">
+        <div class="flex-1" style="min-width:200px;position:relative;">
+            <i data-lucide="search" style="width:14px;height:14px;position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none;"></i>
+            <input type="text" id="cv-search" class="input w-full" placeholder="Search company, role, keywords..." oninput="filterCVs()" style="padding-left:34px;">
+        </div>
+        <select id="sort-cvs" class="input" onchange="sortCVs()">
+            <option value="date-desc">Sort: Newest First</option>
+            <option value="date-asc">Sort: Oldest First</option>
+            <option value="company-asc">Sort: Company A to Z</option>
+        </select>
+    </div>
+</div>
+
+<!-- TABLE VIEW -->
+<div id="cv-table-view">
+    <div class="card overflow-hidden">
+        <table>
+            <thead>
+                <tr>
+                    <th>Company</th>
+                    <th>Role</th>
+                    <th>Filename</th>
+                    <th>Keywords Used</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="cvs-body">
+                {% for cv in cvs %}
+                <tr class="cv-row"
+                    data-company="{{ cv.company|lower }}"
+                    data-role="{{ cv.role|lower }}"
+                    data-keywords="{{ cv.keywords|join(' ')|lower if cv.keywords else '' }}"
+                    data-date="{{ cv.created_at.isoformat() if cv.created_at else '' }}">
+                    <td class="font-semibold" style="color: var(--text-primary);">{{ cv.company }}</td>
+                    <td style="color: var(--text-secondary);">{{ cv.role }}</td>
+                    <td class="text-sm" style="color: var(--text-muted);">{{ cv.filename }}</td>
+                    <td>
+                        <div class="flex flex-wrap gap-1">
+                            {% for kw in cv.keywords[:6] %}
+                            <span class="badge badge-approved" style="font-size:10px;">{{ kw }}</span>
+                            {% endfor %}
+                            {% if cv.keywords|length > 6 %}<span class="text-xs ml-1" style="color: var(--text-muted);">+{{ cv.keywords|length - 6 }}</span>{% endif %}
+                        </div>
+                    </td>
+                    <td class="text-sm" style="color: var(--text-muted);">{{ cv.created_at.strftime('%b %d, %Y') if cv.created_at else '-' }}</td>
+                    <td>
+                        <a href="/cvs/download/{{ cv.id }}" class="btn btn-secondary" style="font-size:11px; padding:5px 14px;">
+                            <i data-lucide="download" style="width:12px;height:12px;"></i> Download
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not cvs %}
+                <tr><td colspan="6" class="text-center py-10" style="color: var(--text-muted);">
+                    <i data-lucide="file-x" style="width:28px;height:28px;display:block;margin:0 auto 8px;color:var(--text-muted);"></i>
+                    No CVs generated yet. Use the CV button on a job to generate one.
+                </td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- CARD VIEW -->
+<div id="cv-card-view" style="display:none;">
+    <div class="cv-cards">
+        {% for cv in cvs %}
+        <div class="cv-card cv-card-item"
+             data-company="{{ cv.company|lower }}"
+             data-role="{{ cv.role|lower }}"
+             data-keywords="{{ cv.keywords|join(' ')|lower if cv.keywords else '' }}"
+             data-date="{{ cv.created_at.isoformat() if cv.created_at else '' }}">
+            <div class="flex items-start gap-3 mb-3">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style="background: var(--accent-soft);">
+                    <i data-lucide="file-text" style="width:18px;height:18px;color:var(--accent);"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="font-semibold truncate" style="color: var(--text-primary);">{{ cv.company }}</div>
+                    <div class="text-sm truncate" style="color: var(--text-muted);">{{ cv.role }}</div>
+                </div>
+            </div>
+            <div class="text-xs mb-3 truncate" style="color: var(--text-muted);">{{ cv.filename }}</div>
+            {% if cv.keywords %}
+            <div class="flex flex-wrap gap-1 mb-3">
+                {% for kw in cv.keywords[:5] %}
+                <span class="badge badge-approved" style="font-size:10px;">{{ kw }}</span>
+                {% endfor %}
+                {% if cv.keywords|length > 5 %}<span class="text-xs ml-1" style="color: var(--text-muted);">+{{ cv.keywords|length - 5 }}</span>{% endif %}
+            </div>
+            {% endif %}
+            <div class="flex items-center justify-between pt-3" style="border-top: 1px solid var(--border-subtle);">
+                <span class="text-xs" style="color: var(--text-muted);">{{ cv.created_at.strftime('%b %d, %Y') if cv.created_at else '-' }}</span>
+                <a href="/cvs/download/{{ cv.id }}" class="btn btn-primary" style="font-size:11px;padding:4px 12px;">
+                    <i data-lucide="download" style="width:11px;height:11px;"></i> Download
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="text-sm mt-3" style="color: var(--text-muted);" id="cvs-count">{{ cvs|length }} CV versions</div>
+
+<script>
+function setCVView(view) {
+    document.getElementById('cv-table-view').style.display = view === 'table' ? '' : 'none';
+    document.getElementById('cv-card-view').style.display = view === 'cards' ? '' : 'none';
+    document.getElementById('btn-table-cv').classList.toggle('active', view === 'table');
+    document.getElementById('btn-card-cv').classList.toggle('active', view === 'cards');
+    localStorage.setItem('cv-view', view);
+}
+(function() { if (localStorage.getItem('cv-view') === 'cards') setCVView('cards'); })();
+
+function filterCVs() {
+    const q = document.getElementById('cv-search').value.toLowerCase();
+    let visible = 0;
+    document.querySelectorAll('.cv-row, .cv-card-item').forEach(el => {
+        const match = !q || el.dataset.company.includes(q) || el.dataset.role.includes(q) || (el.dataset.keywords || '').includes(q);
+        el.style.display = match ? '' : 'none';
+        if (match && el.classList.contains('cv-row')) visible++;
+    });
+    document.getElementById('cvs-count').textContent = visible + ' CV versions';
+}
+
+function sortCVs() {
+    const val = document.getElementById('sort-cvs').value;
+    const tbody = document.getElementById('cvs-body');
+    const rows = Array.from(tbody.querySelectorAll('.cv-row'));
+    rows.sort((a, b) => {
+        if (val === 'date-desc') return (b.dataset.date||'').localeCompare(a.dataset.date||'');
+        if (val === 'date-asc') return (a.dataset.date||'').localeCompare(b.dataset.date||'');
+        if (val === 'company-asc') return a.dataset.company.localeCompare(b.dataset.company);
+        return 0;
+    });
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.lucide) lucide.createIcons();
+});
+</script>
+{% endblock %}
