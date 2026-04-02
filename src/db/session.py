@@ -25,6 +25,13 @@ if DATABASE_URL:
         max_overflow=20, 
         pool_pre_ping=True
     )
+    
+    # Set search_path to 'outreach' schema for isolation on Supabase
+    @event.listens_for(engine, "connect")
+    def set_postgres_schema(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("SET search_path TO outreach, public")
+        cursor.close()
 else:
     # SQLite logic
     DB_DIR = Path(__file__).resolve().parent.parent.parent

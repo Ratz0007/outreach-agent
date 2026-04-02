@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 import { CoachWidget } from "@/components/coach/coach-widget";
 
 const inter = Inter({
@@ -33,7 +34,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""}>
+            {children}
+            <CoachWidget />
+          </GoogleOAuthProvider>
         </ThemeProvider>
       </body>
     </html>

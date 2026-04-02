@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
-import { Layout } from 'lucide-react';
+import { GoogleLoginButton } from '@/components/auth/google-login-button';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -26,7 +26,6 @@ export default function RegisterPage() {
 
     try {
       await api.auth.register(formData);
-      // Success! Redirect to onboarding
       router.push("/onboarding");
     } catch (err: any) {
       setError(err.message || "Registration failed. Try again.");
@@ -36,11 +35,11 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-muted/30 px-4 py-20">
       <div className="w-full max-w-md">
         <div className="text-center mb-10">
           <Link href="/" className="inline-flex items-center gap-2 mb-6 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform text-lg">
               OA
             </div>
             <span className="font-bold text-2xl tracking-tighter">Outreach Agent</span>
@@ -56,42 +55,55 @@ export default function RegisterPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <Input 
-              label="Full Name" 
-              placeholder="e.g. Ratin Sharma"
-              required
-              value={formData.full_name}
-              onChange={(e) => setFormData({...formData, full_name: e.target.value})}
-            />
-            <Input 
-              label="Email Address" 
-              type="email" 
-              placeholder="you@example.com"
-              required
-              value={formData.email}
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
-            />
-            <Input 
-              label="Username" 
-              placeholder="Choose a unique username"
-              required
-              value={formData.username}
-              onChange={(e) => setFormData({...formData, username: e.target.value})}
-            />
-            <Input 
-              label="Password" 
-              type="password" 
-              placeholder="Min. 6 characters"
-              required
-              value={formData.password}
-              onChange={(e) => setFormData({...formData, password: e.target.value})}
-            />
+          <div className="space-y-6">
+            <GoogleLoginButton />
+            
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground font-medium">Or continue with email</span>
+              </div>
+            </div>
 
-            <Button type="submit" className="w-full h-14 text-base" disabled={loading}>
-              {loading ? "Creating Account..." : "Create Account"}
-            </Button>
-          </form>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <Input 
+                label="Full Name" 
+                placeholder="e.g. Ratin Sharma"
+                required
+                value={formData.full_name}
+                onChange={(e) => setFormData({...formData, full_name: e.target.value})}
+              />
+              <Input 
+                label="Email Address" 
+                type="email" 
+                placeholder="you@example.com"
+                required
+                value={formData.email}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
+              />
+              <Input 
+                label="Username" 
+                placeholder="Choose a unique username"
+                required
+                value={formData.username}
+                onChange={(e) => setFormData({...formData, username: e.target.value})}
+              />
+              <Input 
+                label="Password" 
+                type="password" 
+                placeholder="Min. 6 characters"
+                required
+                value={formData.password}
+                onChange={(e) => setFormData({...formData, password: e.target.value})}
+              />
+
+              <Button type="submit" className="w-full h-14 text-base" disabled={loading}>
+                {loading ? "Creating Account..." : "Create Account"}
+              </Button>
+            </form>
+          </div>
 
           <div className="mt-8 pt-8 border-t text-center">
             <p className="text-sm text-muted-foreground">

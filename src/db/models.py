@@ -207,10 +207,12 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    username = Column(Text, nullable=False, unique=True)
-    email = Column(Text, nullable=False, unique=True)
-    password_hash = Column(Text, nullable=False)
+    username = Column(Text, nullable=False, unique=True, index=True)
+    email = Column(Text, nullable=False, unique=True, index=True)
+    password_hash = Column(Text)  # Nullable for Google Auth users
+    google_id = Column(Text, unique=True, index=True)
     full_name = Column(Text)
+    picture_url = Column(Text)
     linkedin_url = Column(Text)
     is_active = Column(Boolean, default=True)
     settings = Column(Text)  # JSON blob for user-specific settings

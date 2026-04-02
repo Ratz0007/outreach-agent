@@ -14,13 +14,17 @@ import {
   ArrowLeft,
   Sparkles,
   ShieldCheck,
-  Zap
+  Zap,
+  Globe,
+  ExternalLink,
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const STEPS = [
   { id: 'profile', title: 'Profile', icon: User, description: 'Tell us a bit about yourself' },
+  { id: 'linkedin', title: 'LinkedIn', icon: Globe, description: 'Connect your professional identity' },
   { id: 'apis', title: 'Connect', icon: Key, description: 'Paste your API keys' },
   { id: 'preferences', title: 'Search', icon: Search, description: 'Define your target roles' },
 ];
@@ -30,6 +34,9 @@ export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [detectedProfile, setDetectedProfile] = useState<any>(null);
+  const [manualMode, setManualMode] = useState(false);
 
   const [formData, setFormData] = useState({
     full_name: "",
@@ -43,11 +50,29 @@ export default function OnboardingPage() {
     search_industries: "SaaS, AI, Fintech"
   });
 
-  // Fetch current user on mount to pre-fill
+  // Fetch current user and try to sync LinkedIn
   useEffect(() => {
-    api.auth.me().then(user => {
-      setFormData(prev => ({ ...prev, full_name: user.full_name || "" }));
-    }).catch(() => {});
+    const init = async () => {
+      try {
+        const user = await api.auth.me();
+        setFormData(prev => ({ ...prev, full_name: user.full_name || "" }));
+        
+        // If we have a name but no LinkedIn, try to sync
+        if (user.full_name && !user.linkedin_url) {
+          setIsSyncing(true);
+          const { profile } = await api.onboarding.syncLinkedin();
+          setDetectedProfile(profile);
+          if (profile?.url) {
+             setFormData(prev => ({ ...prev, linkedin_url: profile.url, headline: profile.headline || "" }));
+          }
+        }
+      } catch (err) {
+        console.error("Failed to init onboarding", err);
+      } finally {
+        setIsSyncing(false);
+      }
+    };
+    init();
   }, []);
 
   const handleNext = () => {
@@ -68,27 +93,17 @@ export default function OnboardingPage() {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      // POST the settings to backend
-      // We use the JSON API endpoint we created
-      await apiFetch("/settings", {
-        method: "POST",
-        body: JSON.stringify(formData)
-      });
+      // Save all data to settings/profile
+      await api.onboarding.confirmLinkedin(formData.linkedin_url);
+      // In a real app we'd save the rest too, for now we mock it
       setSuccess(true);
-      setTimeout(() => router.push("/"), 2000);
+      setTimeout(() => router.push("/dashboard"), 2000);
     } catch (err) {
       console.error(err);
       alert("Failed to save settings. Please try again.");
     } finally {
       setLoading(false);
     }
-  };
-
-  // Helper for internal fetch since we haven't added /api/settings to api.ts yet
-  // Actually let's just use a placeholder for now since we're focused on UI
-  const apiFetch = async (url: string, init: any) => {
-     // In a real app, this would call the backend
-     return { success: true };
   };
 
   const StepIcon = STEPS[currentStep].icon;
@@ -100,7 +115,7 @@ export default function OnboardingPage() {
         <div className="container mx-auto px-4 h-20 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white font-bold">OA</div>
+              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white font-bold text-sm">OA</div>
               <span className="font-bold hidden sm:inline">Onboarding</span>
             </div>
             
@@ -120,7 +135,7 @@ export default function OnboardingPage() {
             </div>
           </div>
           
-          <Button variant="ghost" size="sm" onClick={() => router.push("/")} className="text-muted-foreground">Skip for now</Button>
+          <Button variant="ghost" size="sm" onClick={() => router.push("/dashboard")} className="text-muted-foreground text-xs uppercase font-bold tracking-wider">Skip</Button>
         </div>
       </div>
 
@@ -158,16 +173,68 @@ export default function OnboardingPage() {
                       onChange={e => setFormData({...formData, headline: e.target.value})}
                       placeholder="e.g. Senior Account Executive | SaaS"
                     />
-                    <Input 
-                      label="LinkedIn Profile URL" 
-                      value={formData.linkedin_url}
-                      onChange={e => setFormData({...formData, linkedin_url: e.target.value})}
-                      placeholder="https://linkedin.com/in/..."
-                    />
                   </div>
                 )}
 
                 {currentStep === 1 && (
+                  <div className="space-y-6 animate-in fade-in duration-500">
+                    {isSyncing ? (
+                      <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                        <Loader2 className="w-10 h-10 text-primary animate-spin" />
+                        <p className="font-medium text-muted-foreground">Finding your LinkedIn profile...</p>
+                      </div>
+                    ) : detectedProfile && !manualMode ? (
+                      <div className="space-y-6">
+                        <div className="p-6 rounded-3xl bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800 text-center">
+                          <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-4">We found a match!</p>
+                          <div className="flex flex-col items-center gap-2 mb-6">
+                            <h3 className="text-2xl font-bold">{detectedProfile.name}</h3>
+                            <p className="text-muted-foreground text-sm">{detectedProfile.headline}</p>
+                            <a 
+                              href={detectedProfile.url} 
+                              target="_blank" 
+                              className="text-primary text-xs flex items-center gap-1 hover:underline mt-2"
+                            >
+                              {detectedProfile.url} <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </div>
+                          <div className="flex flex-col gap-3">
+                            <p className="text-sm font-medium">Is this you?</p>
+                            <div className="flex gap-4">
+                              <Button 
+                                variant="outline" 
+                                className="flex-1 rounded-2xl h-12"
+                                onClick={() => setManualMode(true)}
+                              >
+                                No, it's not me
+                              </Button>
+                              <Button 
+                                className="flex-1 rounded-2xl h-12 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                onClick={handleNext}
+                              >
+                                Yes, confirm profile
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <p className="text-sm text-muted-foreground mb-4">
+                         {manualMode ? "No problem! Please paste your LinkedIn URL below." : "We couldn't find your profile automatically. Please paste it below."}
+                        </p>
+                        <Input 
+                          label="LinkedIn Profile URL" 
+                          value={formData.linkedin_url}
+                          onChange={e => setFormData({...formData, linkedin_url: e.target.value})}
+                          placeholder="https://linkedin.com/in/yourprofile"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {currentStep === 2 && (
                   <div className="space-y-5">
                     <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800 flex gap-3 text-sm text-amber-800 dark:text-amber-200">
                       <ShieldCheck className="w-5 h-5 flex-shrink-0" />
@@ -198,7 +265,7 @@ export default function OnboardingPage() {
                   </div>
                 )}
 
-                {currentStep === 2 && (
+                {currentStep === 3 && (
                   <div className="space-y-5">
                     <Input 
                       label="Target Roles" 
@@ -229,8 +296,12 @@ export default function OnboardingPage() {
                   >
                     <ArrowLeft className="w-4 h-4 mr-2" /> Back
                   </Button>
-                  <Button onClick={handleNext} disabled={loading} className="px-8">
-                    {currentStep === STEPS.length - 1 ? (loading ? "Saving..." : "Finish Group") : "Continue"} 
+                  <Button 
+                    onClick={handleNext} 
+                    disabled={loading || (currentStep === 1 && isSyncing)} 
+                    className="px-8 h-12 rounded-2xl"
+                  >
+                    {currentStep === STEPS.length - 1 ? (loading ? "Saving..." : "Finish Setup") : "Continue"} 
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </div>
@@ -240,8 +311,9 @@ export default function OnboardingPage() {
               <div className="flex items-center justify-center gap-3 text-sm text-muted-foreground italic">
                 <Zap className="w-4 h-4 text-primary" />
                 {currentStep === 0 && "This profile helps the AI personalize your CV per job."}
-                {currentStep === 1 && "You can always change your keys later in Settings."}
-                {currentStep === 2 && "The agent will use these to find high-match roles daily."}
+                {currentStep === 1 && "Connecting LinkedIn allows the agent to source your past experience."}
+                {currentStep === 2 && "You can always change your keys later in Settings."}
+                {currentStep === 3 && "The agent will use these to find high-match roles daily."}
               </div>
             </motion.div>
           ) : (

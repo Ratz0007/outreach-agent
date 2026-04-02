@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
+import { GoogleLoginButton } from '@/components/auth/google-login-button';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -23,7 +24,7 @@ export default function LoginPage() {
 
     try {
       await api.auth.login(formData);
-      router.push("/");
+      router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || "Login failed. Check your password.");
     } finally {
@@ -52,27 +53,40 @@ export default function LoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <Input 
-              label="Username" 
-              placeholder="Username"
-              required
-              value={formData.username}
-              onChange={(e) => setFormData({...formData, username: e.target.value})}
-            />
-            <Input 
-              label="Password" 
-              type="password" 
-              placeholder="Your password"
-              required
-              value={formData.password}
-              onChange={(e) => setFormData({...formData, password: e.target.value})}
-            />
+          <div className="space-y-6">
+            <GoogleLoginButton />
+            
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground font-medium">Or continue with credentials</span>
+              </div>
+            </div>
 
-            <Button type="submit" className="w-full h-14 text-base" disabled={loading}>
-              {loading ? "Signing in..." : "Sign In"}
-            </Button>
-          </form>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <Input 
+                label="Username" 
+                placeholder="Username"
+                required
+                value={formData.username}
+                onChange={(e) => setFormData({...formData, username: e.target.value})}
+              />
+              <Input 
+                label="Password" 
+                type="password" 
+                placeholder="Your password"
+                required
+                value={formData.password}
+                onChange={(e) => setFormData({...formData, password: e.target.value})}
+              />
+
+              <Button type="submit" className="w-full h-14 text-base" disabled={loading}>
+                {loading ? "Signing in..." : "Sign In"}
+              </Button>
+            </form>
+          </div>
 
           <div className="mt-8 pt-8 border-t text-center">
             <p className="text-sm text-muted-foreground">
