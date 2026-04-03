@@ -52,4 +52,10 @@ export const api = {
       body: JSON.stringify({ status }),
     }),
   },
+  coach: {
+    chat: (message: string, voice: boolean) => apiFetch('/api/coach/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message, voice }),
+    }),
+  },
 };

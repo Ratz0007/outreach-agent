@@ -15,7 +15,8 @@ import {
   Command,
   ChevronRight,
   Maximize2,
-  Minimize2
+  Minimize2,
+  CheckCircle2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
