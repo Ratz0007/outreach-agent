@@ -33,6 +33,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+    logout: () => apiFetch('/api/auth/logout', { method: 'POST' }),
+  },
+  dashboard: {
+    stats: () => apiFetch('/api/dashboard/stats'),
   },
   onboarding: {
     syncLinkedin: () => apiFetch('/api/onboarding/sync-linkedin'),
