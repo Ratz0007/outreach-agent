@@ -21,21 +21,6 @@ app = FastAPI(
     redirect_slashes=False  # Crucial for CORS preflight (no 307 redirects on /api/ endpoints)
 )
 
-# ── CORS Middleware ──────────────────────────────────────────────
-# In production, we allow the specific Vercel origin for advanced security.
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "https://outreach-agent-app.vercel.app",
-        "http://localhost:3000"
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["set-cookie"], # Explicitly expose set-cookie if needed
-)
-
-
 class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         # 1. Skip auth check for preflight OPTIONS requests (required for CORS)
@@ -61,6 +46,19 @@ class AuthMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 app.add_middleware(AuthMiddleware)
+
+# ── CORS Middleware (Must be added AFTER AuthMiddleware to run FIRST) ────────────────
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://outreach-agent-app.vercel.app",
+        "http://localhost:3000"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["set-cookie"],
+)
 
 
 TEMPLATE_DIR = Path(__file__).parent / "templates"
