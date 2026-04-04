@@ -27,8 +27,12 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if request.method == "OPTIONS":
             return await call_next(request)
             
-        # 2. Allow open routes
-        open_paths = ["/login", "/register", "/static", "/api/actions", "/api/health", "/api/auth/google"]
+        # 2. Allow open routes (public pages and auth endpoints)
+        open_paths = [
+            "/login", "/register", "/static", 
+            "/api/actions", "/api/health", 
+            "/api/auth/google", "/api/auth/login", "/api/auth/register"
+        ]
         if any(request.url.path.startswith(p) for p in open_paths):
             return await call_next(request)
         
