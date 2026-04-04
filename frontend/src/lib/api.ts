@@ -26,11 +26,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ token }),
     }),
-    register: (data: any) => apiFetch('/api/register', {
+    register: (data: any) => apiFetch('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-    login: (data: any) => apiFetch('/api/login', {
+    login: (data: any) => apiFetch('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify(data),
     }),

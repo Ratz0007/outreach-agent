@@ -16,13 +16,19 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from src.auth import verify_session_token, COOKIE_NAME
 
-app = FastAPI(title="Outreach Agent Dashboard")
+app = FastAPI(
+    title="Outreach Agent Dashboard",
+    redirect_slashes=False  # Crucial for CORS preflight (no 307 redirects on /api/ endpoints)
+)
 
 # ── CORS Middleware ──────────────────────────────────────────────
 # In production, we allow the specific Vercel origin for advanced security.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Keeping * to ensure initial connectivity, restriction comes later
+    allow_origins=[
+        "https://outreach-agent-app.vercel.app",
+        "http://localhost:3000"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
