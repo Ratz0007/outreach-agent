@@ -2704,7 +2704,15 @@ async def api_login(request: Request):
         
     token = create_session_token(user.id)
     response = _json_success({"token": token, "user": {"id": user.id, "username": user.username, "full_name": user.full_name}})
-    response.set_cookie(COOKIE_NAME, token, max_age=86400 * 7, httponly=True, samesite="lax")
+    # Production-grade cookie security for cross-domain (Vercel -> Railway)
+    response.set_cookie(
+        COOKIE_NAME, 
+        token, 
+        max_age=86400 * 7, 
+        httponly=True, 
+        samesite="none", 
+        secure=True
+    )
     return response
 
 @api_router.post("/auth/register")
@@ -2724,7 +2732,15 @@ async def api_register(request: Request):
         
     token = create_session_token(result.id)
     response = _json_success({"token": token, "user": {"id": result.id, "username": result.username, "full_name": result.full_name}})
-    response.set_cookie(COOKIE_NAME, token, max_age=86400 * 7, httponly=True, samesite="lax")
+    # Production-grade cookie security for cross-domain (Vercel -> Railway)
+    response.set_cookie(
+        COOKIE_NAME, 
+        token, 
+        max_age=86400 * 7, 
+        httponly=True, 
+        samesite="none", 
+        secure=True
+    )
     return response
 
 @api_router.get("/auth/me")
@@ -2828,42 +2844,60 @@ async def api_google_auth(request: Request):
     if not token:
         return _json_error("Missing Google token")
         
-    # In production, we'd use the REAL client id from environment variables
-    # For now, let's assume it's valid or use a mock verification
-    client_id = getattr(Secrets, "GOOGLE_CLIENT_ID", "mock-client-id")
+    client_id = getattr(Secrets, "GOOGLE_CLIENT_ID", "")
+    if not client_id:
+        return _json_error("Google OAuth not configured on backend")
+        
+    # Verify the real token
+    idinfo = verify_google_token(token, client_id)
+    if not idinfo:
+        return _json_error("Invalid Google token", 401)
     
-    # Try real verification if we think it's a real token, else mock it
-    # We skip actual verify_google_token call for now to avoid dependency errors if not installed
-    # idinfo = verify_google_token(token, client_id)
+    email = idinfo.get("email")
+    name = idinfo.get("name", "")
+    google_id = idinfo.get("sub")
     
-    # Mock behavior for project demonstration:
-    # We assume the token is always valid and contains 'name' and 'email'
-    mock_user_info = {
-        "email": "user@example.com",
-        "name": "Professional User",
-        "sub": token[:10]  # mock id
-    }
-    
-    # Check if user exists
+    if not email:
+        return _json_error("Google account must provide email")
+        
     session = get_session()
     try:
         from src.db.models import User
-        user = session.query(User).filter(User.email == mock_user_info["email"]).first()
+        # First try to find by google_id or email
+        user = session.query(User).filter((User.google_id == google_id) | (User.email == email)).first()
         
         if not user:
             # Register new user from Google
             user = register_user(
-                username=mock_user_info["email"].split('@')[0], 
-                email=mock_user_info["email"], 
+                username=email.split('@')[0], 
+                email=email, 
                 password=None, # OAuth users have no password
-                full_name=mock_user_info["name"]
+                full_name=name
             )
             if isinstance(user, str):
                 return _json_error(user)
+            # Link Google ID
+            user.google_id = google_id
+            session.add(user)
+            session.commit()
+        elif not user.google_id:
+            # Link existing email account to Google ID
+            user.google_id = google_id
+            session.add(user)
+            session.commit()
         
         token = create_session_token(user.id)
         response = _json_success({"token": token, "user": {"id": user.id, "username": user.username, "full_name": user.full_name}})
-        response.set_cookie(COOKIE_NAME, token, max_age=86400 * 7, httponly=True, samesite="lax")
+        
+        # Cross-domain cookie security: MUST use samesite="none" and secure=True
+        response.set_cookie(
+            COOKIE_NAME, 
+            token, 
+            max_age=86400 * 7, 
+            httponly=True, 
+            samesite="none", 
+            secure=True
+        )
         return response
     finally:
         session.close()

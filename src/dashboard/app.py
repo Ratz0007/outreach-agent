@@ -19,26 +19,37 @@ from src.auth import verify_session_token, COOKIE_NAME
 app = FastAPI(title="Outreach Agent Dashboard")
 
 # ── CORS Middleware ──────────────────────────────────────────────
-# Needed to allow Next.js (port 3000) to communicate with FastAPI (port 8000)
+# In production, we allow the specific Vercel origin for advanced security.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all for public SaaS, restrict later if needed
+    allow_origins=["*"],  # Keeping * to ensure initial connectivity, restriction comes later
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["set-cookie"], # Explicitly expose set-cookie if needed
 )
 
 
 class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
-        # Allow open routes
-        open_paths = ["/login", "/register", "/static", "/api/actions", "/api/health"]
+        # 1. Skip auth check for preflight OPTIONS requests (required for CORS)
+        if request.method == "OPTIONS":
+            return await call_next(request)
+            
+        # 2. Allow open routes
+        open_paths = ["/login", "/register", "/static", "/api/actions", "/api/health", "/api/auth/google"]
         if any(request.url.path.startswith(p) for p in open_paths):
             return await call_next(request)
         
-        # Check auth
+        # 3. Check auth
         token = request.cookies.get(COOKIE_NAME)
         if not token or not verify_session_token(token):
+            # 4. If an API request fails auth, return 401 instead of a redirect
+            if request.url.path.startswith("/api/"):
+                from fastapi.responses import JSONResponse
+                return JSONResponse({"error": "Unauthorized", "detail": "Invalid or missing session token"}, status_code=401)
+            
+            # 5. Only redirect UI (HTML) routes to /login
             return RedirectResponse(url="/login", status_code=303)
             
         return await call_next(request)

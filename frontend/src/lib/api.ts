@@ -6,6 +6,7 @@ export async function apiFetch(path: string, options?: RequestInit) {
   const url = `${API_BASE_URL}${path}`;
   const res = await fetch(url, {
     ...options,
+    credentials: 'include', // Mandatory for cross-domain cookies
     headers: {
       'Content-Type': 'application/json',
       ...options?.headers,

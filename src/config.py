@@ -84,6 +84,10 @@ class SecretsMeta(type):
     def SNOV_USER_ID(cls): return _get_user_setting("snov_user_id", os.getenv("SNOV_USER_ID", ""))
     @property
     def SNOV_SECRET(cls): return _get_user_setting("snov_secret", os.getenv("SNOV_SECRET", ""))
+    @property
+    def GOOGLE_CLIENT_ID(cls): return os.getenv("GOOGLE_CLIENT_ID", "")
+    @property
+    def GOOGLE_SECRET(cls): return os.getenv("GOOGLE_SECRET", "")
 
 class Secrets(metaclass=SecretsMeta):
     pass
